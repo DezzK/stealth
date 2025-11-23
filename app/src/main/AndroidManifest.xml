@@ -15,8 +15,9 @@
   ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
   -->
 
-<manifest xmlns:tools="http://schemas.android.com/tools"
-    xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
@@ -28,19 +29,23 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTask">
-        </activity>
+            android:launchMode="singleTask"></activity>
 
-        <receiver android:name=".HardwareKeysReceiver" android:enabled="true" android:exported="true"
+        <receiver
+            android:name=".HardwareKeysReceiver"
+            android:enabled="true"
+            android:exported="true"
+            android:priority="2147483647"
             tools:ignore="ExportedReceiver">
             <intent-filter>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <action android:name="ecarx.intent.action.ECARX_KEY_ISRC_EVENT"/>
-                <action android:name="ecarx.intent.action.ECARX_KEY_ISRC_EVENT_DOWN"/>
-                <action android:name="ecarx.intent.action.ECARX_KEY_ISRC_EVENT_UP"/>
-                <action android:name="ecarx.intent.action.ECARX_KEY_RSRC_EVENT_DOWN"/>
-                <action android:name="ecarx.intent.action.ECARX_KEY_RSRC_EVENT_UP"/>
-                <action android:name="ecarx.intent.action.ECARX_KEY_RSRC_EVENT"/>
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <action android:name="ecarx.intent.action.ECARX_KEY_ISRC_EVENT" />
+                <action android:name="ecarx.intent.action.ECARX_KEY_ISRC_EVENT_DOWN" />
+                <action android:name="ecarx.intent.action.ECARX_KEY_ISRC_EVENT_UP" />
+                <action android:name="ecarx.intent.action.ECARX_KEY_RSRC_EVENT_DOWN" />
+                <action android:name="ecarx.intent.action.ECARX_KEY_RSRC_EVENT_UP" />
+                <action android:name="ecarx.intent.action.ECARX_KEY_RSRC_EVENT" />
             </intent-filter>
         </receiver>
     </application>
