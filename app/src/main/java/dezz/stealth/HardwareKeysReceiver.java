@@ -35,18 +35,14 @@ public class HardwareKeysReceiver extends BroadcastReceiver {
             case "ecarx.intent.action.ECARX_KEY_ISRC_EVENT_DOWN":
             case "ecarx.intent.action.ECARX_KEY_RSRC_EVENT_DOWN":
                 if (startMainActivityTask == null) {
-                    Log.d(TAG, "create new start task");
                     startMainActivityTask = new StartMainActivityTask(context);
                 }
                 mainHandler.postDelayed(startMainActivityTask, 5000);
-                Log.d(TAG, "Down" + mainHandler);
                 break;
 
             case "ecarx.intent.action.ECARX_KEY_ISRC_EVENT_UP":
             case "ecarx.intent.action.ECARX_KEY_RSRC_EVENT_UP":
-                Log.d(TAG, "Up " + mainHandler);
                 mainHandler.removeCallbacks(startMainActivityTask);
-
                 break;
         }
     }
