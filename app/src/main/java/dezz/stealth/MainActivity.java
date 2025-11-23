@@ -89,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
         PackageManager pm = getPackageManager();
         List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA);
         String currentPackageName = getPackageName();
+        Set<String> selectedApps = excludeAppsStorage.getAppsToKeep();
 
         List<AppInfo> appInfoList = new ArrayList<>();
 
@@ -101,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
                     appInfo.packageName,
                     appInfo.loadLabel(pm).toString(),
                     appInfo.loadIcon(pm),
-                    false
+                    selectedApps.contains(appInfo.packageName)
             );
             appInfoList.add(info);
         }
