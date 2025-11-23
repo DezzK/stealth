@@ -94,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
         List<AppInfo> appInfoList = new ArrayList<>();
 
         for (ApplicationInfo appInfo : packages) {
-            if (AlwaysIgnoreAppResolver.alwaysIgnoreApp(appInfo.packageName, currentPackageName)) {
+            if (AlwaysIgnoreAppResolver.alwaysIgnoreApp(appInfo, currentPackageName)) {
                 continue;
             }
 
@@ -177,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
         Set<String> appsToKeep = excludeAppsStorage.getAppsToKeep();
         List<String> packageList = new ArrayList<>();
         for (ApplicationInfo appInfo : packages) {
-            if (AlwaysIgnoreAppResolver.alwaysIgnoreApp(appInfo.packageName, currentPackageName) ||
+            if (AlwaysIgnoreAppResolver.alwaysIgnoreApp(appInfo, currentPackageName) ||
                     appsToKeep.contains(appInfo.packageName)) {
                 continue;
             }

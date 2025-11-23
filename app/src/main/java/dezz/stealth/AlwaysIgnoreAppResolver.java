@@ -1,30 +1,11 @@
 package dezz.stealth;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import android.content.pm.ApplicationInfo;
 
 public final class AlwaysIgnoreAppResolver {
-    private static final Set<String> SYSTEM_APP_LIST = new HashSet<>(List.of(
-            "android",
-            "com.example.drtest",
-            "com.example.storagetest",
-            "com.example.ui.PASTestApp",
-            "log.debugtools.ecarx.logmanager",
-            "com.qti.snapdragon.qdcm_ff",
-            "net.easyconn",
-            "com.qti.diagservices"
-    ));
-
-    public static boolean alwaysIgnoreApp(String packageName, String stealthAppPackageName) {
-        return !packageName.equals("com.android.chrome") &&
-                (packageName.equals(stealthAppPackageName) ||
-                packageName.startsWith("android.") ||
-                packageName.startsWith("com.android.") ||
-                packageName.startsWith("ecarx.") ||
-                packageName.startsWith("com.ecarx.") ||
-                packageName.startsWith("com.qualcomm.") ||
-                packageName.startsWith("com.ts.") ||
-                SYSTEM_APP_LIST.contains(packageName));
+    public static boolean alwaysIgnoreApp(ApplicationInfo appInfo, String stealthAppPackageName) {
+        return ((appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) ||
+                appInfo.packageName.equals(stealthAppPackageName) ||
+                appInfo.packageName.startsWith("com.ecarx.");
     }
 }
