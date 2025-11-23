@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Сервисный режим</string>
+    <string name="notification_content">Служба сервисного режима работает</string>
+    <string name="always_ignore_apps">Выберите системные (штатные) приложения, которые должны остаться видимыми во время сервисного режима. Выбранные приложения НЕ будут отключены:</string>
+    <string name="apps_hidden_successfully">Приложения успешно скрыты</string>
+    <string name="apps_hide_error">Ошибка скрытия приложения: %s</string>
+    <string name="apps_restored_successfully">Приложения успешно восстановлены</string>
+    <string name="apps_restore_error">Ошибка восстановления приложения: %s</string>
+    <string name="hide_apps">Скрыть приложения кроме выбранных</string>
+    <string name="restore_apps">Восстановить скрытые приложения</string>
+</resources>

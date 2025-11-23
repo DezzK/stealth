@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  ~ Copyright © 2025 Dezz (https://github.com/DezzK)
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:orientation="vertical">
+
+    <!-- Header -->
+    <TextView
+        android:id="@+id/headerText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16sp"
+        android:background="@color/header_background"
+        android:gravity="start"
+        android:paddingHorizontal="24sp"
+        android:paddingVertical="12sp"
+        android:text="@string/app_name"
+        android:textColor="@color/text_primary"
+        android:textSize="32sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8sp"
+        android:textSize="24sp"
+        android:textColor="@color/text_primary"
+        android:text="@string/always_ignore_apps" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:textSize="20sp"
+        android:textColor="@color/text_primary" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/hideAppsButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16sp"
+            android:paddingHorizontal="16sp"
+            android:paddingVertical="8sp"
+            android:singleLine="true"
+            android:text="@string/hide_apps"
+            android:background="@android:color/holo_red_dark"
+            android:textColor="@android:color/white"
+            tools:ignore="ButtonStyle" />
+
+        <Button
+            android:id="@+id/restoreAppsButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16sp"
+            android:paddingHorizontal="16sp"
+            android:paddingVertical="8sp"
+            android:singleLine="true"
+            android:text="@string/restore_apps"
+            android:background="@android:color/holo_green_dark"
+            android:textColor="@android:color/white"
+            tools:ignore="ButtonStyle" />
+
+    </LinearLayout>
+
+    <!-- Copyright notice -->
+    <TextView
+        android:id="@+id/copyrightNoticeText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@color/card_background"
+        android:gravity="center"
+        android:linksClickable="true"
+        android:padding="8sp"
+        android:text="@string/copyright_notice"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp" />
+</LinearLayout>
