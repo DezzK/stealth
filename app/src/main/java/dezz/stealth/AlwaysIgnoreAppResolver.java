@@ -7,7 +7,6 @@ import java.util.Set;
 public final class AlwaysIgnoreAppResolver {
     private static final Set<String> SYSTEM_APP_LIST = new HashSet<>(List.of(
             "android",
-            "org.chromium.webview_shell",
             "com.example.drtest",
             "com.example.storagetest",
             "com.example.ui.PASTestApp",
@@ -18,14 +17,14 @@ public final class AlwaysIgnoreAppResolver {
     ));
 
     public static boolean alwaysIgnoreApp(String packageName, String stealthAppPackageName) {
-        return packageName.equals(stealthAppPackageName) ||
+        return !packageName.equals("com.android.chrome") &&
+                (packageName.equals(stealthAppPackageName) ||
                 packageName.startsWith("android.") ||
                 packageName.startsWith("com.android.") ||
-                packageName.startsWith("com.google.android.") ||
                 packageName.startsWith("ecarx.") ||
                 packageName.startsWith("com.ecarx.") ||
                 packageName.startsWith("com.qualcomm.") ||
                 packageName.startsWith("com.ts.") ||
-                SYSTEM_APP_LIST.contains(packageName);
+                SYSTEM_APP_LIST.contains(packageName));
     }
 }
