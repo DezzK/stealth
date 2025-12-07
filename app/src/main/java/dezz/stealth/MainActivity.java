@@ -17,6 +17,7 @@
 
 package dezz.stealth;
 
+import android.content.ComponentName;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -72,6 +73,12 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
+    private void hideLauncherIcon() {
+        PackageManager p = getPackageManager();
+        ComponentName componentName = new ComponentName(this, MainActivity.class);
+        p.setComponentEnabledSetting(componentName, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+    }
+
     private void initializeViews() {
         final String appVersion = VersionGetter.getAppVersionName(this);
         if (appVersion != null) {
@@ -123,6 +130,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSuccess(String message) {
                 mainHandler.post(() -> {
+                    hideLauncherIcon();
+
                     // Show success message
                     Toast.makeText(MainActivity.this,
                             R.string.apps_hidden_successfully,

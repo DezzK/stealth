@@ -1,14 +1,16 @@
 package dezz.stealth;
 
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.util.Log;
 
 public class HardwareKeysReceiver extends BroadcastReceiver {
     private static final String TAG = "HardwareKeysReceiver";
 
-    private static final int MAX_EVENT_INTERVAL = 500;
+    private static final int MAX_EVENT_INTERVAL = 1500;
     private static final int MAX_EVENT_COUNT = 5;
 
     private static long lastEventTime = 0;
@@ -21,7 +23,7 @@ public class HardwareKeysReceiver extends BroadcastReceiver {
             return;
         }
 
-        Log.d(TAG, "Received key event: " + intent.getAction());
+        Log.d(TAG, "Received key event: " + intent.getAction() + ", lastEventTime: " + lastEventTime + ", count: " + eventCount);
 
         switch (intent.getAction()) {
             case "ecarx.intent.action.ECARX_KEY_RSRC_EVENT":
@@ -33,13 +35,17 @@ public class HardwareKeysReceiver extends BroadcastReceiver {
                     eventCount += 1;
                     if (eventCount >= MAX_EVENT_COUNT) {
                         eventCount = 0;
-                        Intent mainActivityIntent = new Intent(context, MainActivity.class);
-                        mainActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        context.startActivity(mainActivityIntent);
+                        showLauncherIcon(context);
                     }
                 }
                 lastEventTime = now;
                 break;
         }
+    }
+
+    private void showLauncherIcon(Context context) {
+        PackageManager p = context.getPackageManager();
+        ComponentName componentName = new ComponentName(context, MainActivity.class);
+        p.setComponentEnabledSetting(componentName, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, 0);
     }
 }
