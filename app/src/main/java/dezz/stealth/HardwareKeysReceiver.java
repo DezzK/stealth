@@ -3,25 +3,17 @@ package dezz.stealth;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 
 public class HardwareKeysReceiver extends BroadcastReceiver {
-    private record StartMainActivityTask(Context context) implements Runnable {
-
-        @Override
-        public void run() {
-            Intent mainActivityIntent = new Intent(context, MainActivity.class);
-            mainActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(mainActivityIntent);
-        }
-    }
-
     private static final String TAG = "HardwareKeysReceiver";
 
-    private static final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private static Runnable startMainActivityTask = null;
+    private static final int MAX_EVENT_INTERVAL = 500;
+    private static final int MAX_EVENT_COUNT = 5;
+
+    private static long lastEventTime = 0;
+    private static int eventCount = 0;
+
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -32,17 +24,20 @@ public class HardwareKeysReceiver extends BroadcastReceiver {
         Log.d(TAG, "Received key event: " + intent.getAction());
 
         switch (intent.getAction()) {
-            case "ecarx.intent.action.ECARX_KEY_ISRC_EVENT_DOWN":
-            case "ecarx.intent.action.ECARX_KEY_RSRC_EVENT_DOWN":
-                if (startMainActivityTask == null) {
-                    startMainActivityTask = new StartMainActivityTask(context);
+            case "ecarx.intent.action.ECARX_KEY_RSRC_EVENT":
+            case "ecarx.intent.action.ECARX_KEY_ISRC_EVENT":
+                long now = System.currentTimeMillis();
+                if (now - lastEventTime > MAX_EVENT_INTERVAL) {
+                    eventCount = 1;
+                } else {
+                    eventCount += 1;
+                    if (eventCount >= MAX_EVENT_COUNT) {
+                        Intent mainActivityIntent = new Intent(context, MainActivity.class);
+                        mainActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        context.startActivity(mainActivityIntent);
+                    }
                 }
-                mainHandler.postDelayed(startMainActivityTask, 5000);
-                break;
-
-            case "ecarx.intent.action.ECARX_KEY_ISRC_EVENT_UP":
-            case "ecarx.intent.action.ECARX_KEY_RSRC_EVENT_UP":
-                mainHandler.removeCallbacks(startMainActivityTask);
+                lastEventTime = now;
                 break;
         }
     }

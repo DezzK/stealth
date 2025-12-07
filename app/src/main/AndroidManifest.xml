@@ -29,7 +29,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTask"></activity>
+            android:launchMode="singleTask" />
 
         <receiver
             android:name=".HardwareKeysReceiver"
@@ -38,14 +38,10 @@
             android:priority="2147483647"
             tools:ignore="ExportedReceiver">
             <intent-filter>
-                <category android:name="android.intent.category.DEFAULT" />
-
                 <action android:name="ecarx.intent.action.ECARX_KEY_ISRC_EVENT" />
-                <action android:name="ecarx.intent.action.ECARX_KEY_ISRC_EVENT_DOWN" />
-                <action android:name="ecarx.intent.action.ECARX_KEY_ISRC_EVENT_UP" />
-                <action android:name="ecarx.intent.action.ECARX_KEY_RSRC_EVENT_DOWN" />
-                <action android:name="ecarx.intent.action.ECARX_KEY_RSRC_EVENT_UP" />
                 <action android:name="ecarx.intent.action.ECARX_KEY_RSRC_EVENT" />
+
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
     </application>
