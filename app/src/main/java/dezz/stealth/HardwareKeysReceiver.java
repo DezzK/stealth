@@ -32,6 +32,7 @@ public class HardwareKeysReceiver extends BroadcastReceiver {
                 } else {
                     eventCount += 1;
                     if (eventCount >= MAX_EVENT_COUNT) {
+                        eventCount = 0;
                         Intent mainActivityIntent = new Intent(context, MainActivity.class);
                         mainActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         context.startActivity(mainActivityIntent);
