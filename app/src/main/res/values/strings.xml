@@ -2,13 +2,42 @@
 <resources>
     <string name="app_name">Stealth Mode</string>
     <string name="notification_content">Stealth Mode service is running</string>
-    <string name="always_ignore_apps">Select system (stock) apps you want to keep available in Stealth Mode</string>
+    <string name="tab_hide">Hide</string>
+    <string name="tab_restore">Restore</string>
+    <string name="hide_mode_header">Select apps to hide in Stealth Mode. Uncheck apps you want to keep visible:</string>
+    <string name="restore_mode_header">Select hidden apps to restore</string>
+    <string name="no_hidden_apps">No hidden apps to restore</string>
 
     <string name="copyright_notice" translatable="false">© 2025 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
     <string name="apps_hidden_successfully">Apps hidden successfully</string>
     <string name="apps_hide_error">Apps hide error: %s</string>
     <string name="apps_restored_successfully">Apps restored successfully</string>
     <string name="apps_restore_error">Apps restore error: %s</string>
-    <string name="hide_apps">Hide apps except selected</string>
-    <string name="restore_apps">Restore hidden apps</string>
+    <string name="no_apps_selected">No apps selected</string>
+    <string name="hide_apps">Hide selected apps</string>
+    <string name="restore_apps">Restore selected apps</string>
+
+    <string name="set_pin">Set PIN</string>
+    <string name="change_pin">Change PIN</string>
+    <string name="set_pin_title">Set unlock PIN</string>
+    <string name="change_pin_title">Change unlock PIN</string>
+    <string name="pin_dialog_message">Enter a numeric PIN (minimum 3 digits). To reveal the app after hiding, dial this PIN on the phone dialer.</string>
+    <string name="pin_dialog_message_warn_hidden">Enter a new numeric PIN (minimum 3 digits). To reveal the app after hiding, dial this PIN on the phone dialer.\n\nWarning: apps are currently hidden. Remember your new PIN — it will replace the old one!</string>
+    <string name="pin_hint">Enter PIN</string>
+    <string name="pin_set_successfully">PIN set successfully</string>
+    <string name="pin_too_short">PIN must be at least 3 digits</string>
+    <string name="pin_required">Set a PIN code before hiding apps</string>
+
+    <string name="hide_confirm_title">Confirm hiding</string>
+    <string name="hide_confirm_message">The following apps will be hidden:\n\n%s\n\nProceed?</string>
+
+    <string name="apps_hide_partial">%1$d apps hidden, %2$d failed</string>
+    <string name="apps_restore_partial">%1$d apps restored, %2$d failed</string>
+
+    <string name="permissions_required_title">Permissions required</string>
+    <string name="permissions_required_message">Phone call permissions are required for the PIN unlock feature. Without them, you won\'t be able to reveal the app by dialing your PIN.</string>
+
+    <string name="adb_checking">ADB: checking…</string>
+    <string name="adb_connected">ADB: connected</string>
+    <string name="adb_error">ADB: unavailable — %s</string>
 </resources>

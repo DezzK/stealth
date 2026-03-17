@@ -14,11 +14,11 @@ public class ExcludeAppsStorage {
     }
 
     public void add(String packageName) {
-        prefs.edit().putBoolean(packageName, true).apply();
+        prefs.edit().putBoolean(packageName, true).commit();
     }
 
     public void remove(String packageName) {
-        prefs.edit().remove(packageName).apply();
+        prefs.edit().remove(packageName).commit();
     }
 
     public Set<String> getAppsToKeep() {

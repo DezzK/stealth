@@ -29,7 +29,6 @@
         android:id="@+id/headerText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16sp"
         android:background="@color/header_background"
         android:gravity="start"
         android:paddingHorizontal="24sp"
@@ -39,13 +38,60 @@
         android:textSize="32sp"
         android:textStyle="bold" />
 
+    <!-- ADB status -->
     <TextView
+        android:id="@+id/adbStatusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/header_background"
+        android:gravity="start"
+        android:paddingHorizontal="24sp"
+        android:paddingBottom="8sp"
+        android:text="@string/adb_checking"
+        android:textColor="@color/text_secondary"
+        android:textSize="16sp" />
+
+    <!-- Tab bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@color/header_background">
+
+        <TextView
+            android:id="@+id/tabHide"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:paddingVertical="12sp"
+            android:text="@string/tab_hide"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:background="@color/tab_active" />
+
+        <TextView
+            android:id="@+id/tabRestore"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:paddingVertical="12sp"
+            android:text="@string/tab_restore"
+            android:textSize="20sp"
+            android:textColor="@color/text_secondary"
+            android:background="@color/tab_inactive" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/modeHeaderText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="8sp"
         android:textSize="24sp"
         android:textColor="@color/text_primary"
-        android:text="@string/always_ignore_apps" />
+        android:text="@string/hide_mode_header" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
@@ -70,6 +116,19 @@
             android:singleLine="true"
             android:text="@string/hide_apps"
             android:background="@android:color/holo_red_dark"
+            android:textColor="@android:color/white"
+            tools:ignore="ButtonStyle" />
+
+        <Button
+            android:id="@+id/pinButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16sp"
+            android:paddingHorizontal="16sp"
+            android:paddingVertical="8sp"
+            android:singleLine="true"
+            android:text="@string/set_pin"
+            android:background="@android:color/holo_blue_dark"
             android:textColor="@android:color/white"
             tools:ignore="ButtonStyle" />
 

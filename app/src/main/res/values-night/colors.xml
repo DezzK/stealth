@@ -21,4 +21,9 @@
     <color name="header_background">#2C2C2C</color>
     <color name="text_primary">@android:color/primary_text_dark</color>
     <color name="text_secondary">@android:color/secondary_text_dark</color>
+    <color name="tab_active">@color/background</color>
+    <color name="tab_inactive">@color/header_background</color>
+    <color name="tab_disabled">#555555</color>
+    <color name="adb_ok">#66BB6A</color>
+    <color name="adb_error">#EF5350</color>
 </resources>

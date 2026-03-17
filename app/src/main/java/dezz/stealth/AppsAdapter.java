@@ -8,18 +8,31 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class AppsAdapter extends RecyclerView.Adapter<AppsAdapter.AppViewHolder> {
 
     private final List<AppInfo> apps;
+    @Nullable
     private final ExcludeAppsStorage excludeAppsStorage;
 
-    public AppsAdapter(List<AppInfo> apps, ExcludeAppsStorage excludeAppsStorage) {
+    public AppsAdapter(List<AppInfo> apps, @Nullable ExcludeAppsStorage excludeAppsStorage) {
         this.apps = apps;
         this.excludeAppsStorage = excludeAppsStorage;
+    }
+
+    public List<AppInfo> getCheckedApps() {
+        List<AppInfo> checked = new ArrayList<>();
+        for (AppInfo app : apps) {
+            if (app.isChecked()) {
+                checked.add(app);
+            }
+        }
+        return checked;
     }
 
     public static class AppViewHolder extends RecyclerView.ViewHolder {
@@ -52,14 +65,24 @@ public class AppsAdapter extends RecyclerView.Adapter<AppsAdapter.AppViewHolder>
         holder.appIcon.setImageDrawable(app.getIcon());
         holder.appName.setText(app.getAppName());
         holder.appPackage.setText(app.getPackageName());
+
+        // Clear listener BEFORE setChecked to prevent the old listener from firing
+        // for the previously-bound item when the view is recycled.
+        holder.checkBox.setOnCheckedChangeListener(null);
         holder.checkBox.setChecked(app.isChecked());
 
         holder.checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
             app.setChecked(isChecked);
-            if (isChecked) {
-                excludeAppsStorage.add(app.getPackageName());
-            } else {
-                excludeAppsStorage.remove(app.getPackageName());
+            // In hide mode (excludeAppsStorage != null), checked = "hide this app".
+            // ExcludeAppsStorage tracks apps to KEEP, so:
+            //   checked (hide)   → remove from keep-list
+            //   unchecked (keep) → add to keep-list
+            if (excludeAppsStorage != null) {
+                if (isChecked) {
+                    excludeAppsStorage.remove(app.getPackageName());
+                } else {
+                    excludeAppsStorage.add(app.getPackageName());
+                }
             }
         });
 

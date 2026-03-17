@@ -19,9 +19,11 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:label="@string/app_name"
         android:icon="@drawable/ic_icon"
         android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
@@ -38,16 +40,13 @@
         </activity>
 
         <receiver
-            android:name=".HardwareKeysReceiver"
+            android:name=".DialerCodeReceiver"
             android:enabled="true"
             android:exported="true"
             android:priority="2147483647"
             tools:ignore="ExportedReceiver">
             <intent-filter>
-                <action android:name="ecarx.intent.action.ECARX_KEY_ISRC_EVENT" />
-                <action android:name="ecarx.intent.action.ECARX_KEY_RSRC_EVENT" />
-
-                <category android:name="android.intent.category.DEFAULT" />
+                <action android:name="android.intent.action.NEW_OUTGOING_CALL" />
             </intent-filter>
         </receiver>
     </application>

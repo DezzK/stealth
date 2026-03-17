@@ -2,11 +2,40 @@
 <resources>
     <string name="app_name">Сервисный режим</string>
     <string name="notification_content">Служба сервисного режима работает</string>
-    <string name="always_ignore_apps">Выберите системные (штатные) приложения, которые должны остаться видимыми во время сервисного режима. Выбранные приложения НЕ будут отключены:</string>
+    <string name="tab_hide">Скрыть</string>
+    <string name="tab_restore">Восстановить</string>
+    <string name="hide_mode_header">Выберите приложения для скрытия в сервисном режиме. Снимите отметку с приложений, которые хотите оставить видимыми:</string>
+    <string name="restore_mode_header">Выберите скрытые приложения для восстановления</string>
+    <string name="no_hidden_apps">Нет скрытых приложений для восстановления</string>
     <string name="apps_hidden_successfully">Приложения успешно скрыты</string>
     <string name="apps_hide_error">Ошибка скрытия приложения: %s</string>
     <string name="apps_restored_successfully">Приложения успешно восстановлены</string>
     <string name="apps_restore_error">Ошибка восстановления приложения: %s</string>
-    <string name="hide_apps">Скрыть приложения кроме выбранных</string>
-    <string name="restore_apps">Восстановить скрытые приложения</string>
+    <string name="no_apps_selected">Приложения не выбраны</string>
+    <string name="hide_apps">Скрыть выбранные приложения</string>
+    <string name="restore_apps">Восстановить выбранные приложения</string>
+
+    <string name="set_pin">Задать PIN</string>
+    <string name="change_pin">Изменить PIN</string>
+    <string name="set_pin_title">Задать PIN-код разблокировки</string>
+    <string name="change_pin_title">Изменить PIN-код разблокировки</string>
+    <string name="pin_dialog_message">Введите цифровой PIN-код (минимум 3 цифры). Чтобы открыть приложение после скрытия, наберите этот PIN на телефонной клавиатуре.</string>
+    <string name="pin_dialog_message_warn_hidden">Введите новый цифровой PIN-код (минимум 3 цифры). Чтобы открыть приложение после скрытия, наберите этот PIN на телефонной клавиатуре.\n\nВнимание: приложения сейчас скрыты. Запомните новый PIN — он заменит старый!</string>
+    <string name="pin_hint">Введите PIN</string>
+    <string name="pin_set_successfully">PIN-код успешно установлен</string>
+    <string name="pin_too_short">PIN-код должен содержать минимум 3 цифры</string>
+    <string name="pin_required">Задайте PIN-код перед скрытием приложений</string>
+
+    <string name="hide_confirm_title">Подтверждение скрытия</string>
+    <string name="hide_confirm_message">Следующие приложения будут скрыты:\n\n%s\n\nПродолжить?</string>
+
+    <string name="apps_hide_partial">%1$d приложений скрыто, %2$d не удалось</string>
+    <string name="apps_restore_partial">%1$d приложений восстановлено, %2$d не удалось</string>
+
+    <string name="permissions_required_title">Требуются разрешения</string>
+    <string name="permissions_required_message">Разрешения на телефонные вызовы необходимы для разблокировки по PIN-коду. Без них вы не сможете открыть приложение, набрав PIN.</string>
+
+    <string name="adb_checking">ADB: проверка…</string>
+    <string name="adb_connected">ADB: подключено</string>
+    <string name="adb_error">ADB: недоступно — %s</string>
 </resources>
