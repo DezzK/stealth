@@ -21,8 +21,8 @@
     <string name="change_pin">Change PIN</string>
     <string name="set_pin_title">Set unlock PIN</string>
     <string name="change_pin_title">Change unlock PIN</string>
-    <string name="pin_dialog_message">Enter a numeric PIN (minimum 3 digits). To reveal the app after hiding, dial this PIN on the phone dialer.</string>
-    <string name="pin_dialog_message_warn_hidden">Enter a new numeric PIN (minimum 3 digits). To reveal the app after hiding, dial this PIN on the phone dialer.\n\nWarning: apps are currently hidden. Remember your new PIN — it will replace the old one!</string>
+    <string name="pin_dialog_message">Enter a numeric PIN (minimum 3 digits). To reveal the app after hiding, dial this PIN on the phone dialer.\n\nIf phone is not connected, type *#*#PIN#*#* instead.</string>
+    <string name="pin_dialog_message_warn_hidden">Enter a new numeric PIN (minimum 3 digits). To reveal the app after hiding, dial this PIN on the phone dialer. If phone is not connected, type *#*#PIN#*#* instead.\n\nWarning: apps are currently hidden. Remember your new PIN — it will replace the old one!</string>
     <string name="pin_hint">Enter PIN</string>
     <string name="pin_set_successfully">PIN set successfully</string>
     <string name="pin_too_short">PIN must be at least 3 digits</string>
