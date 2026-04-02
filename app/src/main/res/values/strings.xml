@@ -26,7 +26,9 @@
     <string name="pin_hint">Enter PIN</string>
     <string name="pin_set_successfully">PIN set successfully</string>
     <string name="pin_too_short">PIN must be at least 3 digits</string>
+    <string name="pin_no_leading_zero">PIN must not start with 0 — the dialer rejects such numbers</string>
     <string name="pin_required">Set a PIN code before hiding apps</string>
+    <string name="default_pin_hint">Default PIN: %s (set your own for security)</string>
 
     <string name="hide_confirm_title">Confirm hiding</string>
     <string name="hide_confirm_message">The following apps will be hidden:\n\n%s\n\nProceed?</string>

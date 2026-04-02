@@ -147,6 +147,16 @@
 
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/pinHintText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="24sp"
+        android:paddingVertical="4sp"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
     <!-- Copyright notice -->
     <TextView
         android:id="@+id/copyrightNoticeText"

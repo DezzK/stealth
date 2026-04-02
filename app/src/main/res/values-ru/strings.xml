@@ -24,7 +24,9 @@
     <string name="pin_hint">Введите PIN</string>
     <string name="pin_set_successfully">PIN-код успешно установлен</string>
     <string name="pin_too_short">PIN-код должен содержать минимум 3 цифры</string>
+    <string name="pin_no_leading_zero">PIN-код не должен начинаться с 0 — звонилка отклоняет такие номера</string>
     <string name="pin_required">Задайте PIN-код перед скрытием приложений</string>
+    <string name="default_pin_hint">PIN по умолчанию: %s (рекомендуем задать свой)</string>
 
     <string name="hide_confirm_title">Подтверждение скрытия</string>
     <string name="hide_confirm_message">Следующие приложения будут скрыты:\n\n%s\n\nПродолжить?</string>

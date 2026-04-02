@@ -198,12 +198,15 @@ public class MainActivity extends AppCompatActivity {
     private void updatePinState() {
         if (pinStorage.hasPin()) {
             binding.pinButton.setText(R.string.change_pin);
+            binding.pinHintText.setVisibility(View.GONE);
             binding.hideAppsButton.setEnabled(true);
             binding.hideAppsButton.setAlpha(1f);
         } else {
             binding.pinButton.setText(R.string.set_pin);
-            binding.hideAppsButton.setEnabled(false);
-            binding.hideAppsButton.setAlpha(0.5f);
+            binding.pinHintText.setVisibility(View.VISIBLE);
+            binding.pinHintText.setText(getString(R.string.default_pin_hint, PinStorage.DEFAULT_PIN));
+            binding.hideAppsButton.setEnabled(true);
+            binding.hideAppsButton.setAlpha(1f);
         }
     }
 
@@ -234,9 +237,12 @@ public class MainActivity extends AppCompatActivity {
                 .setView(container)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     String pin = input.getText().toString().trim();
-                    if (pinStorage.save(pin)) {
+                    int validation = pinStorage.validate(pin);
+                    if (validation == PinStorage.OK && pinStorage.save(pin)) {
                         Toast.makeText(this, R.string.pin_set_successfully, Toast.LENGTH_SHORT).show();
                         updatePinState();
+                    } else if (validation == PinStorage.STARTS_WITH_ZERO) {
+                        Toast.makeText(this, R.string.pin_no_leading_zero, Toast.LENGTH_LONG).show();
                     } else {
                         Toast.makeText(this, R.string.pin_too_short, Toast.LENGTH_LONG).show();
                     }
@@ -330,8 +336,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void setAdbOperationInProgress(boolean inProgress) {
         adbOperationInProgress = inProgress;
-        binding.hideAppsButton.setEnabled(!inProgress && pinStorage.hasPin());
-        binding.hideAppsButton.setAlpha((!inProgress && pinStorage.hasPin()) ? 1f : 0.5f);
+        binding.hideAppsButton.setEnabled(!inProgress);
+        binding.hideAppsButton.setAlpha(!inProgress ? 1f : 0.5f);
         binding.restoreAppsButton.setEnabled(!inProgress);
         binding.restoreAppsButton.setAlpha(!inProgress ? 1f : 0.5f);
         binding.tabHide.setEnabled(!inProgress);
@@ -452,11 +458,6 @@ public class MainActivity extends AppCompatActivity {
 
     public void disableApps() {
         if (adbOperationInProgress) return;
-
-        if (!pinStorage.hasPin()) {
-            Toast.makeText(this, R.string.pin_required, Toast.LENGTH_LONG).show();
-            return;
-        }
 
         List<AppInfo> checkedApps = adapter.getCheckedApps();
 

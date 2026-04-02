@@ -9,11 +9,13 @@ import java.security.NoSuchAlgorithmException;
 
 public class PinStorage {
     private static final String KEY_PIN_HASH = "pin_hash";
-    private static final String KEY_FAILED_ATTEMPTS = "failed_attempts";
-    private static final String KEY_LOCKOUT_UNTIL = "lockout_until";
+    public static final String DEFAULT_PIN = "123456";
     private static final int MIN_PIN_LENGTH = 3;
-    private static final int MAX_FAILED_ATTEMPTS = 5;
-    private static final long LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+
+    public static final int INVALID = 0;
+    public static final int TOO_SHORT = 1;
+    public static final int STARTS_WITH_ZERO = 2;
+    public static final int OK = 3;
 
     private final SharedPreferences prefs;
 
@@ -22,48 +24,32 @@ public class PinStorage {
         this.prefs = deviceContext.getSharedPreferences(context.getPackageName() + "_pin", Context.MODE_PRIVATE);
     }
 
+    public int validate(String pin) {
+        if (pin == null || pin.isEmpty()) return INVALID;
+        if (pin.length() < MIN_PIN_LENGTH) return TOO_SHORT;
+        if (pin.charAt(0) == '0') return STARTS_WITH_ZERO;
+        return OK;
+    }
+
     public boolean save(String pin) {
-        if (pin == null || pin.length() < MIN_PIN_LENGTH) {
+        if (validate(pin) != OK) {
             return false;
         }
-        prefs.edit()
-                .putString(KEY_PIN_HASH, hash(pin))
-                .putInt(KEY_FAILED_ATTEMPTS, 0)
-                .remove(KEY_LOCKOUT_UNTIL)
-                .commit();
+        prefs.edit().putString(KEY_PIN_HASH, hash(pin)).commit();
         return true;
     }
 
     public boolean verify(String input) {
-        if (input == null || !hasPin()) {
+        if (input == null) {
             return false;
         }
 
-        // Check lockout
-        long lockoutUntil = prefs.getLong(KEY_LOCKOUT_UNTIL, 0);
-        if (System.currentTimeMillis() < lockoutUntil) {
-            return false;
-        }
+        // If no custom PIN is set, accept the default PIN
+        String storedHash = hasPin()
+                ? prefs.getString(KEY_PIN_HASH, null)
+                : hash(DEFAULT_PIN);
 
-        String storedHash = prefs.getString(KEY_PIN_HASH, null);
-        if (storedHash != null && storedHash.equals(hash(input))) {
-            // Reset failed attempts on success
-            prefs.edit()
-                    .putInt(KEY_FAILED_ATTEMPTS, 0)
-                    .remove(KEY_LOCKOUT_UNTIL)
-                    .commit();
-            return true;
-        }
-
-        // Record failed attempt
-        int failed = prefs.getInt(KEY_FAILED_ATTEMPTS, 0) + 1;
-        SharedPreferences.Editor editor = prefs.edit().putInt(KEY_FAILED_ATTEMPTS, failed);
-        if (failed >= MAX_FAILED_ATTEMPTS) {
-            editor.putLong(KEY_LOCKOUT_UNTIL, System.currentTimeMillis() + LOCKOUT_DURATION_MS);
-            editor.putInt(KEY_FAILED_ATTEMPTS, 0);
-        }
-        editor.commit();
-        return false;
+        return storedHash != null && storedHash.equals(hash(input));
     }
 
     public boolean hasPin() {
