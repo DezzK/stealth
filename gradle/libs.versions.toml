@@ -1,8 +1,8 @@
 [versions]
 appcompat = "1.7.1"
 core = "1.17.0"
-gradle = "8.13.0"
-kotlin = "2.2.0"
+gradle = "9.1.0"
+kotlin = "2.2.10"
 recyclerview = "1.4.0"
 adblib = "1.3"
 

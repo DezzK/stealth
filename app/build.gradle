@@ -28,9 +28,12 @@ android {
         targetSdkVersion 28
         versionCode rootProject.ext.appVersionCode
         versionName rootProject.ext.appVersionName
+    }
 
-        // Set the output APK name
-        setProperty("archivesBaseName", "stealth-${versionName}")
+    applicationVariants.configureEach { variant ->
+        variant.outputs.configureEach {
+            outputFileName = "stealth-${variant.versionName}.apk"
+        }
     }
 
     compileOptions {
