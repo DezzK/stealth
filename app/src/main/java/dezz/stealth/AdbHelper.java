@@ -124,7 +124,7 @@ public class AdbHelper {
 
     public void checkConnection(AdbCallback callback) {
         executor.execute(() -> {
-            String lastError = null;
+            List<String> errors = new ArrayList<>();
             for (int port : CANDIDATE_PORTS) {
                 Socket socket = new Socket();
                 AdbConnection connection = null;
@@ -142,13 +142,14 @@ public class AdbHelper {
                     callback.onSuccess(String.valueOf(port));
                     return;
                 } catch (Exception e) {
-                    lastError = e.getMessage();
-                    Log.d(TAG, "Port " + port + " failed: " + lastError);
+                    String msg = e.getMessage();
+                    Log.d(TAG, "Port " + port + " failed: " + msg);
+                    errors.add("port " + port + ": " + (msg != null ? msg : "failed"));
                 } finally {
                     closeQuietly(connection, socket);
                 }
             }
-            callback.onError(lastError != null ? lastError : "no ADB port available");
+            callback.onError(String.join("; ", errors));
         });
     }
 
