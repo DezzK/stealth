@@ -152,9 +152,9 @@ public class MainActivity extends AppCompatActivity {
         AdbHelper adbHelper = AdbHelper.getInstance(this);
         adbHelper.checkConnection(new AdbHelper.AdbCallback() {
             @Override
-            public void onSuccess(String message) {
+            public void onSuccess(String port) {
                 mainHandler.post(() -> {
-                    binding.adbStatusText.setText(R.string.adb_connected);
+                    binding.adbStatusText.setText(getString(R.string.adb_connected, port));
                     binding.adbStatusText.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.adb_ok));
                 });
             }

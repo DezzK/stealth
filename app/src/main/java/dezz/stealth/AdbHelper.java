@@ -23,11 +23,12 @@ import java.util.concurrent.Executors;
 
 public class AdbHelper {
     private static final String TAG = "AdbHelper";
-    private static final int ADB_PORT = 5555;
+    private static final int[] CANDIDATE_PORTS = {5555, 7777};
     private static final int CONNECT_TIMEOUT_MS = 5000;
     private static final String KEY_FILE_PREFIX = "adb_key";
 
     private static volatile AdbHelper instance;
+    private volatile int activePort = -1;
 
     /**
      * Result of a batch ADB operation, supporting partial success.
@@ -123,24 +124,31 @@ public class AdbHelper {
 
     public void checkConnection(AdbCallback callback) {
         executor.execute(() -> {
-            Socket socket = new Socket();
-            AdbConnection connection = null;
-            try {
-                socket.connect(new InetSocketAddress("127.0.0.1", ADB_PORT), CONNECT_TIMEOUT_MS);
+            String lastError = null;
+            for (int port : CANDIDATE_PORTS) {
+                Socket socket = new Socket();
+                AdbConnection connection = null;
+                try {
+                    socket.connect(new InetSocketAddress("127.0.0.1", port), CONNECT_TIMEOUT_MS);
 
-                connection = AdbConnection.create(socket, crypto);
-                connection.connect();
+                    connection = AdbConnection.create(socket, crypto);
+                    connection.connect();
 
-                // Run a simple command to verify the connection works
-                AdbStream stream = connection.open("shell:echo ok");
-                stream.read();
+                    // Run a simple command to verify the connection works
+                    AdbStream stream = connection.open("shell:echo ok");
+                    stream.read();
 
-                callback.onSuccess("connected");
-            } catch (Exception e) {
-                callback.onError(e.getMessage());
-            } finally {
-                closeQuietly(connection, socket);
+                    activePort = port;
+                    callback.onSuccess(String.valueOf(port));
+                    return;
+                } catch (Exception e) {
+                    lastError = e.getMessage();
+                    Log.d(TAG, "Port " + port + " failed: " + lastError);
+                } finally {
+                    closeQuietly(connection, socket);
+                }
             }
+            callback.onError(lastError != null ? lastError : "no ADB port available");
         });
     }
 
@@ -153,10 +161,14 @@ public class AdbHelper {
     }
 
     private void runBatchCommands(List<String> packageNames, boolean disable, AdbBatchCallback callback) {
+        if (activePort == -1) {
+            callback.onConnectionError("ADB port not detected");
+            return;
+        }
         Socket socket = new Socket();
         AdbConnection connection = null;
         try {
-            socket.connect(new InetSocketAddress("127.0.0.1", ADB_PORT), CONNECT_TIMEOUT_MS);
+            socket.connect(new InetSocketAddress("127.0.0.1", activePort), CONNECT_TIMEOUT_MS);
 
             connection = AdbConnection.create(socket, crypto);
             connection.connect();

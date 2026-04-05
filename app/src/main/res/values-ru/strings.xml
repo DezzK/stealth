@@ -38,6 +38,6 @@
     <string name="permissions_required_message">Разрешения на телефонные вызовы необходимы для разблокировки по PIN-коду. Без них вы не сможете открыть приложение, набрав PIN.</string>
 
     <string name="adb_checking">ADB: проверка…</string>
-    <string name="adb_connected">ADB: подключено</string>
+    <string name="adb_connected">ADB: подключено (порт %s)</string>
     <string name="adb_error">ADB: недоступно — %s</string>
 </resources>

@@ -40,6 +40,6 @@
     <string name="permissions_required_message">Phone call permissions are required for the PIN unlock feature. Without them, you won\'t be able to reveal the app by dialing your PIN.</string>
 
     <string name="adb_checking">ADB: checking…</string>
-    <string name="adb_connected">ADB: connected</string>
+    <string name="adb_connected">ADB: connected (port %s)</string>
     <string name="adb_error">ADB: unavailable — %s</string>
 </resources>
