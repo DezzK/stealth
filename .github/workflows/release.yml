@@ -59,7 +59,6 @@ jobs:
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
         ./gradlew assembleRelease
-        mv app/build/outputs/apk/release/stealth-${VERSION_NAME}-release.apk app/build/outputs/apk/release/stealth-${VERSION_NAME}.apk
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
