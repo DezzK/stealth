@@ -36,8 +36,14 @@
     <string name="apps_hide_partial">%1$d apps hidden, %2$d failed</string>
     <string name="apps_restore_partial">%1$d apps restored, %2$d failed</string>
 
+    <string name="pin_required_dialog_message">A PIN code is required before hiding apps. After hiding, the app icon will disappear. To reveal it again, open the dialer, enter your PIN, and press the call button.\n\nSet a numeric PIN (minimum 3 digits):</string>
+
     <string name="permissions_required_title">Permissions required</string>
     <string name="permissions_required_message">Phone call permissions are required for the PIN unlock feature. Without them, you won\'t be able to reveal the app by dialing your PIN.</string>
+    <string name="permissions_required_to_hide_message">To hide apps, the application needs phone call permissions. Without them, after hiding you will not be able to reveal the app by dialing PIN — the app icon will remain hidden with no way to restore it.\n\nGrant the permissions?</string>
+    <string name="grant_permissions">Grant</string>
+    <string name="permissions_open_settings_message">Phone call permissions were previously denied. To grant them, go to the app settings and enable them manually. Without these permissions, after hiding you will not be able to reveal the app by dialing PIN.</string>
+    <string name="open_settings">Open settings</string>
 
     <string name="adb_checking">ADB: checking…</string>
     <string name="adb_connected">ADB: connected (port %s)</string>

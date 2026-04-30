@@ -34,8 +34,14 @@
     <string name="apps_hide_partial">%1$d приложений скрыто, %2$d не удалось</string>
     <string name="apps_restore_partial">%1$d приложений восстановлено, %2$d не удалось</string>
 
+    <string name="pin_required_dialog_message">Для скрытия приложений необходимо задать PIN-код. После скрытия иконка приложения исчезнет. Чтобы снова её отобразить, откройте штатную звонилку, наберите ваш PIN-код и нажмите кнопку вызова.\n\nЗадайте цифровой PIN-код (минимум 3 цифры):</string>
+
     <string name="permissions_required_title">Требуются разрешения</string>
     <string name="permissions_required_message">Разрешения на телефонные вызовы необходимы для разблокировки по PIN-коду. Без них вы не сможете открыть приложение, набрав PIN.</string>
+    <string name="permissions_required_to_hide_message">Для скрытия приложений необходимы разрешения на телефонные вызовы. Без них после скрытия вы не сможете отобразить приложение, набрав PIN-код — иконка останется скрытой без возможности восстановления.\n\nВыдать разрешения?</string>
+    <string name="grant_permissions">Выдать</string>
+    <string name="permissions_open_settings_message">Разрешения на телефонные вызовы были ранее отклонены. Чтобы их выдать, перейдите в настройки приложения и включите их вручную. Без этих разрешений после скрытия вы не сможете отобразить приложение, набрав PIN-код.</string>
+    <string name="open_settings">Открыть настройки</string>
 
     <string name="adb_checking">ADB: проверка…</string>
     <string name="adb_connected">ADB: подключено (порт %s)</string>

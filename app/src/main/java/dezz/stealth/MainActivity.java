@@ -19,6 +19,7 @@ package dezz.stealth;
 
 import android.Manifest;
 import android.content.ComponentName;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
@@ -199,56 +200,33 @@ public class MainActivity extends AppCompatActivity {
         if (pinStorage.hasPin()) {
             binding.pinButton.setText(R.string.change_pin);
             binding.pinHintText.setVisibility(View.GONE);
-            binding.hideAppsButton.setEnabled(true);
-            binding.hideAppsButton.setAlpha(1f);
         } else {
             binding.pinButton.setText(R.string.set_pin);
             binding.pinHintText.setVisibility(View.VISIBLE);
             binding.pinHintText.setText(getString(R.string.default_pin_hint, PinStorage.DEFAULT_PIN));
-            binding.hideAppsButton.setEnabled(false);
-            binding.hideAppsButton.setAlpha(0.5f);
         }
     }
 
+    private boolean hasRequiredPermissions() {
+        for (String perm : REQUIRED_PERMISSIONS) {
+            if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private void showPinDialog() {
-        final EditText input = new EditText(this);
-        input.setInputType(InputType.TYPE_CLASS_NUMBER);
-        input.setHint(R.string.pin_hint);
-        input.setTextSize(24);
-
-        FrameLayout container = new FrameLayout(this);
-        int padding = (int) (24 * getResources().getDisplayMetrics().density);
-        container.setPadding(padding, padding / 2, padding, 0);
-        container.addView(input);
-
         boolean changingPin = pinStorage.hasPin();
         String title = changingPin
                 ? getString(R.string.change_pin_title)
                 : getString(R.string.set_pin_title);
 
-        // Warn user if changing PIN while apps are hidden
         int messageResId = (changingPin && appsToHideStorage.hasHiddenApps())
                 ? R.string.pin_dialog_message_warn_hidden
                 : R.string.pin_dialog_message;
 
-        new AlertDialog.Builder(this)
-                .setTitle(title)
-                .setMessage(messageResId)
-                .setView(container)
-                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    String pin = input.getText().toString().trim();
-                    int validation = pinStorage.validate(pin);
-                    if (validation == PinStorage.OK && pinStorage.save(pin)) {
-                        Toast.makeText(this, R.string.pin_set_successfully, Toast.LENGTH_SHORT).show();
-                        updatePinState();
-                    } else if (validation == PinStorage.STARTS_WITH_ZERO) {
-                        Toast.makeText(this, R.string.pin_no_leading_zero, Toast.LENGTH_LONG).show();
-                    } else {
-                        Toast.makeText(this, R.string.pin_too_short, Toast.LENGTH_LONG).show();
-                    }
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+        showPinInputDialog(title, messageResId);
     }
 
     private void switchToHideMode() {
@@ -302,6 +280,7 @@ public class MainActivity extends AppCompatActivity {
         binding.hideAppsButton.setVisibility(View.VISIBLE);
         binding.pinButton.setVisibility(View.VISIBLE);
         binding.restoreAppsButton.setVisibility(View.GONE);
+        updatePinState();
 
         List<AppInfo> appsList = getAppsList();
         adapter = new AppsAdapter(appsList, excludeAppsStorage);
@@ -321,8 +300,8 @@ public class MainActivity extends AppCompatActivity {
 
         binding.modeHeaderText.setText(R.string.restore_mode_header);
         binding.hideAppsButton.setVisibility(View.GONE);
-        binding.pinButton.setVisibility(View.GONE);
         binding.restoreAppsButton.setVisibility(View.VISIBLE);
+        updatePinState();
 
         adapter = new AppsAdapter(hiddenApps, null);
         binding.recyclerView.setAdapter(adapter);
@@ -336,9 +315,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void setAdbOperationInProgress(boolean inProgress) {
         adbOperationInProgress = inProgress;
-        boolean canHide = !inProgress && pinStorage.hasPin();
-        binding.hideAppsButton.setEnabled(canHide);
-        binding.hideAppsButton.setAlpha(canHide ? 1f : 0.5f);
+        binding.hideAppsButton.setEnabled(!inProgress);
+        binding.hideAppsButton.setAlpha(!inProgress ? 1f : 0.5f);
         binding.restoreAppsButton.setEnabled(!inProgress);
         binding.restoreAppsButton.setAlpha(!inProgress ? 1f : 0.5f);
         binding.tabHide.setEnabled(!inProgress);
@@ -460,11 +438,19 @@ public class MainActivity extends AppCompatActivity {
     public void disableApps() {
         if (adbOperationInProgress) return;
 
+        // Step 1: Check PIN
         if (!pinStorage.hasPin()) {
-            Toast.makeText(this, R.string.pin_required, Toast.LENGTH_LONG).show();
+            showPinRequiredDialog();
             return;
         }
 
+        // Step 2: Check permissions
+        if (!hasRequiredPermissions()) {
+            showPermissionsRequiredDialog();
+            return;
+        }
+
+        // Step 3: Check selection
         List<AppInfo> checkedApps = adapter.getCheckedApps();
 
         if (checkedApps.isEmpty()) {
@@ -493,6 +479,76 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+    }
+
+    private void showPinInputDialog(String title, int messageResId) {
+        final EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+        input.setHint(R.string.pin_hint);
+        input.setTextSize(24);
+
+        FrameLayout container = new FrameLayout(this);
+        int padding = (int) (24 * getResources().getDisplayMetrics().density);
+        container.setPadding(padding, padding / 2, padding, 0);
+        container.addView(input);
+
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(messageResId)
+                .setView(container)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    String pin = input.getText().toString().trim();
+                    int validation = pinStorage.validate(pin);
+                    if (validation == PinStorage.OK && pinStorage.save(pin)) {
+                        Toast.makeText(this, R.string.pin_set_successfully, Toast.LENGTH_SHORT).show();
+                        updatePinState();
+                    } else if (validation == PinStorage.STARTS_WITH_ZERO) {
+                        Toast.makeText(this, R.string.pin_no_leading_zero, Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(this, R.string.pin_too_short, Toast.LENGTH_LONG).show();
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void showPinRequiredDialog() {
+        showPinInputDialog(getString(R.string.set_pin_title), R.string.pin_required_dialog_message);
+    }
+
+    private void showPermissionsRequiredDialog() {
+        // Check if we can still ask for permissions, or if user selected "Don't ask again"
+        boolean canAskAgain = false;
+        for (String perm : REQUIRED_PERMISSIONS) {
+            if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this, perm)) {
+                    canAskAgain = true;
+                }
+            }
+        }
+
+        if (canAskAgain) {
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.permissions_required_title)
+                    .setMessage(R.string.permissions_required_to_hide_message)
+                    .setPositiveButton(R.string.grant_permissions, (dialog, which) -> {
+                        requestRequiredPermissions();
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+        } else {
+            // User selected "Don't ask again" — send to app settings
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.permissions_required_title)
+                    .setMessage(R.string.permissions_open_settings_message)
+                    .setPositiveButton(R.string.open_settings, (dialog, which) -> {
+                        Intent intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                        intent.setData(android.net.Uri.fromParts("package", getPackageName(), null));
+                        startActivity(intent);
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+        }
     }
 
     private void performDisableApps(Map<String, String> packagesToDisable) {
