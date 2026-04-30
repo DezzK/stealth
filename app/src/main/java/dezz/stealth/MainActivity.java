@@ -205,8 +205,8 @@ public class MainActivity extends AppCompatActivity {
             binding.pinButton.setText(R.string.set_pin);
             binding.pinHintText.setVisibility(View.VISIBLE);
             binding.pinHintText.setText(getString(R.string.default_pin_hint, PinStorage.DEFAULT_PIN));
-            binding.hideAppsButton.setEnabled(true);
-            binding.hideAppsButton.setAlpha(1f);
+            binding.hideAppsButton.setEnabled(false);
+            binding.hideAppsButton.setAlpha(0.5f);
         }
     }
 
@@ -336,8 +336,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void setAdbOperationInProgress(boolean inProgress) {
         adbOperationInProgress = inProgress;
-        binding.hideAppsButton.setEnabled(!inProgress);
-        binding.hideAppsButton.setAlpha(!inProgress ? 1f : 0.5f);
+        boolean canHide = !inProgress && pinStorage.hasPin();
+        binding.hideAppsButton.setEnabled(canHide);
+        binding.hideAppsButton.setAlpha(canHide ? 1f : 0.5f);
         binding.restoreAppsButton.setEnabled(!inProgress);
         binding.restoreAppsButton.setAlpha(!inProgress ? 1f : 0.5f);
         binding.tabHide.setEnabled(!inProgress);
@@ -458,6 +459,11 @@ public class MainActivity extends AppCompatActivity {
 
     public void disableApps() {
         if (adbOperationInProgress) return;
+
+        if (!pinStorage.hasPin()) {
+            Toast.makeText(this, R.string.pin_required, Toast.LENGTH_LONG).show();
+            return;
+        }
 
         List<AppInfo> checkedApps = adapter.getCheckedApps();
 
