@@ -23,7 +23,7 @@ import java.util.concurrent.Executors;
 
 public class AdbHelper {
     private static final String TAG = "AdbHelper";
-    private static final int[] CANDIDATE_PORTS = {5555, 7777};
+    private static final int[] CANDIDATE_PORTS = {5555, 7777, 5037};
     private static final int CONNECT_TIMEOUT_MS = 5000;
     private static final String KEY_FILE_PREFIX = "adb_key";
 
