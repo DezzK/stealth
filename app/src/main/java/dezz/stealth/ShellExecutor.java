@@ -19,8 +19,9 @@ import java.util.concurrent.Executors;
 public class ShellExecutor {
     private static final String TAG = "ShellExecutor";
 
-    // Telnet candidates (tried first — needed for devices with dynamic ADB port like Geely Cityray)
-    private static final String[] TELNET_HOSTS = {"127.0.0.1", "android.local"};
+    // Telnet on the head unit itself — used by devices with a dynamic ADB port (e.g. Geely Cityray).
+    // Only loopback is meaningful here: stock Android can't resolve .local (mDNS) addresses anyway.
+    private static final String TELNET_HOST = "127.0.0.1";
     private static final int TELNET_PORT = 23;
 
     // ADB candidates (fallback)
@@ -47,9 +48,23 @@ public class ShellExecutor {
         public boolean hasAnySuccess() { return !succeededPackages.isEmpty(); }
     }
 
+    /**
+     * One probed endpoint and the error from probing it. Carried in the callback so the
+     * UI layer can format/localize the message rather than parsing a raw concatenated string.
+     */
+    public static class ConnectionAttempt {
+        public final String label;     // e.g. "Telnet 127.0.0.1:23" or "ADB 127.0.0.1:5555"
+        public final String rawError;  // raw exception/probe message, may be null
+
+        ConnectionAttempt(String label, String rawError) {
+            this.label = label;
+            this.rawError = rawError;
+        }
+    }
+
     public interface StatusCallback {
-        void onSuccess(String message);
-        void onError(String error);
+        void onSuccess(String description);
+        void onError(List<ConnectionAttempt> attempts);
     }
 
     public interface BatchCallback {
@@ -94,16 +109,16 @@ public class ShellExecutor {
 
     public void checkConnection(StatusCallback callback) {
         executor.execute(() -> {
-            List<String> errors = new ArrayList<>();
+            List<ConnectionAttempt> attempts = new ArrayList<>();
 
             // 1. Try Telnet first (verify pm actually works via "pm path android")
-            for (String host : TELNET_HOSTS) {
-                TransportFactory factory = () -> TelnetTransport.connect(host, TELNET_PORT);
+            {
+                TransportFactory factory = () -> TelnetTransport.connect(TELNET_HOST, TELNET_PORT);
                 String description = tryTransport(
                         factory,
                         t -> t.exec("pm path android").contains("package:"),
-                        errors,
-                        "telnet " + host);
+                        attempts,
+                        "Telnet " + TELNET_HOST + ":" + TELNET_PORT);
                 if (description != null) {
                     activeFactory = factory;
                     callback.onSuccess(description);
@@ -117,8 +132,8 @@ public class ShellExecutor {
                 String description = tryTransport(
                         factory,
                         t -> { t.exec("echo ok"); return true; },
-                        errors,
-                        "adb port " + port);
+                        attempts,
+                        "ADB 127.0.0.1:" + port);
                 if (description != null) {
                     activeFactory = factory;
                     callback.onSuccess(description);
@@ -126,30 +141,48 @@ public class ShellExecutor {
                 }
             }
 
-            callback.onError(String.join("; ", errors));
+            callback.onError(attempts);
         });
     }
 
     /**
      * Try to open and probe a transport. Returns describe() on success, null on failure
-     * (errors are appended to the {@code errors} list).
+     * (a {@link ConnectionAttempt} describing the failure is appended to {@code attempts}).
      */
-    private String tryTransport(TransportFactory factory, ProbeFn probe, List<String> errors, String label) {
+    private String tryTransport(TransportFactory factory, ProbeFn probe,
+                                List<ConnectionAttempt> attempts, String label) {
         ShellTransport transport = null;
         try {
             transport = factory.open();
             if (probe.test(transport)) {
                 return transport.describe();
             }
-            errors.add(label + ": pm not available");
+            attempts.add(new ConnectionAttempt(label, "pm not available"));
         } catch (Exception e) {
-            String msg = e.getMessage();
-            Log.d(TAG, label + " failed: " + msg);
-            errors.add(label + ": " + (msg != null ? msg : "failed"));
+            Log.d(TAG, label + " failed: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            attempts.add(new ConnectionAttempt(label, classifyFailure(e)));
         } finally {
             if (transport != null) transport.close();
         }
         return null;
+    }
+
+    /**
+     * Map a connection exception to a stable English keyword that the UI layer can
+     * pattern-match for localization. Exception types are more reliable than message
+     * text — e.g. {@link java.net.UnknownHostException} on Android often carries just
+     * the hostname as its message.
+     */
+    private static String classifyFailure(Exception e) {
+        if (e instanceof java.net.UnknownHostException) return "Unknown host";
+        if (e instanceof java.net.SocketTimeoutException) return "Connection timeout";
+        if (e instanceof java.net.ConnectException) return "Connection refused";
+        if (e instanceof java.io.IOException) {
+            String msg = e.getMessage();
+            return msg != null ? msg : "I/O error";
+        }
+        String msg = e.getMessage();
+        return msg != null ? msg : e.getClass().getSimpleName();
     }
 
     // ── Batch commands ────────────────────────────────────────────────

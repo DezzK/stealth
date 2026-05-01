@@ -63,6 +63,9 @@ public class MainActivity extends AppCompatActivity {
     /** Incremented on every mode switch — used to discard stale list-build results. */
     private int listGeneration = 0;
 
+    /** Last connection probe attempts — shown in dialog on tap. Null while connected or never checked. */
+    private List<ShellExecutor.ConnectionAttempt> lastConnectionAttempts = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -135,7 +138,9 @@ public class MainActivity extends AppCompatActivity {
 
         binding.hideAppsButton.setOnClickListener(v -> disableApps());
         binding.restoreAppsButton.setOnClickListener(v -> restoreSelectedApps());
-        binding.pinButton.setOnClickListener(v -> pinDialogs.showSetOrChange());
+        binding.settingsButton.setOnClickListener(v -> pinDialogs.showSetOrChange());
+        binding.pinHintRow.setOnClickListener(v -> pinDialogs.showSetOrChange());
+        binding.connectionStatusText.setOnClickListener(v -> showConnectionDetailsIfAny());
 
         binding.tabHide.setOnClickListener(v -> {
             if (isRestoreMode) switchToHideMode();
@@ -145,25 +150,68 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void showConnectionDetailsIfAny() {
+        if (lastConnectionAttempts == null || lastConnectionAttempts.isEmpty()) return;
+
+        StringBuilder body = new StringBuilder();
+        body.append(getString(R.string.connection_details_intro));
+        body.append("\n");
+        for (ShellExecutor.ConnectionAttempt a : lastConnectionAttempts) {
+            body.append("\n• ").append(a.label).append(" — ").append(simplifyConnectionError(a.rawError));
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.connection_details_title)
+                .setMessage(body.toString())
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    /**
+     * Translate a raw exception/probe message to a short, localized phrase.
+     * Falls back to the trimmed raw message if no known pattern matches.
+     */
+    private String simplifyConnectionError(String raw) {
+        if (raw == null || raw.isEmpty()) return getString(R.string.connection_error_unknown);
+        String m = raw.toLowerCase(java.util.Locale.ROOT);
+        if (m.contains("econnrefused") || m.contains("connection refused")) {
+            return getString(R.string.connection_error_refused);
+        }
+        if (m.contains("timeout") || m.contains("timed out")) {
+            return getString(R.string.connection_error_timeout);
+        }
+        if (m.contains("unable to resolve") || m.contains("unknown host")
+                || m.contains("nodename") || m.contains("unreachable")) {
+            return getString(R.string.connection_error_unreachable);
+        }
+        if (m.contains("pm not available")) {
+            return getString(R.string.connection_error_pm_unavailable);
+        }
+        return raw.length() > 80 ? raw.substring(0, 80) + "…" : raw;
+    }
+
     private void checkAdbStatus() {
-        binding.adbStatusText.setText(R.string.adb_checking);
-        binding.adbStatusText.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
+        binding.connectionStatusText.setText(R.string.connection_checking);
+        binding.connectionStatusText.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
+        lastConnectionAttempts = null;
 
         ShellExecutor shell = ShellExecutor.getInstance(this);
         shell.checkConnection(new ShellExecutor.StatusCallback() {
             @Override
-            public void onSuccess(String port) {
+            public void onSuccess(String description) {
                 postIfAlive(() -> {
-                    binding.adbStatusText.setText(getString(R.string.adb_connected, port));
-                    binding.adbStatusText.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.adb_ok));
+                    lastConnectionAttempts = null;
+                    binding.connectionStatusText.setText(getString(R.string.connection_connected, description));
+                    binding.connectionStatusText.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.adb_ok));
                 });
             }
 
             @Override
-            public void onError(String error) {
+            public void onError(List<ShellExecutor.ConnectionAttempt> attempts) {
                 postIfAlive(() -> {
-                    binding.adbStatusText.setText(getString(R.string.adb_error, error));
-                    binding.adbStatusText.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.adb_error));
+                    lastConnectionAttempts = attempts;
+                    binding.connectionStatusText.setText(R.string.connection_error);
+                    binding.connectionStatusText.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.adb_error));
                 });
             }
         });
@@ -185,22 +233,28 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateTabAppearance() {
         boolean hasHiddenApps = appsToHideStorage.hasHiddenApps();
+        int accent = ContextCompat.getColor(this, R.color.accent);
+        int transparent = ContextCompat.getColor(this, android.R.color.transparent);
+        int primaryText = ContextCompat.getColor(this, R.color.text_primary);
+        int secondaryText = ContextCompat.getColor(this, R.color.text_secondary);
+        int disabledText = ContextCompat.getColor(this, R.color.tab_disabled);
 
         if (isRestoreMode) {
-            binding.tabRestore.setBackgroundColor(ContextCompat.getColor(this, R.color.tab_active));
-            binding.tabRestore.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+            binding.tabRestore.setTextColor(primaryText);
             binding.tabRestore.setTypeface(null, Typeface.BOLD);
-            binding.tabHide.setBackgroundColor(ContextCompat.getColor(this, R.color.tab_inactive));
-            binding.tabHide.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
+            binding.tabRestoreIndicator.setBackgroundColor(accent);
+
+            binding.tabHide.setTextColor(secondaryText);
             binding.tabHide.setTypeface(null, Typeface.NORMAL);
+            binding.tabHideIndicator.setBackgroundColor(transparent);
         } else {
-            binding.tabHide.setBackgroundColor(ContextCompat.getColor(this, R.color.tab_active));
-            binding.tabHide.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+            binding.tabHide.setTextColor(primaryText);
             binding.tabHide.setTypeface(null, Typeface.BOLD);
-            binding.tabRestore.setBackgroundColor(ContextCompat.getColor(this, R.color.tab_inactive));
-            binding.tabRestore.setTextColor(ContextCompat.getColor(this,
-                    hasHiddenApps ? R.color.text_secondary : R.color.tab_disabled));
+            binding.tabHideIndicator.setBackgroundColor(accent);
+
+            binding.tabRestore.setTextColor(hasHiddenApps ? secondaryText : disabledText);
             binding.tabRestore.setTypeface(null, Typeface.NORMAL);
+            binding.tabRestoreIndicator.setBackgroundColor(transparent);
         }
 
         binding.tabRestore.setEnabled(hasHiddenApps);
@@ -209,7 +263,6 @@ public class MainActivity extends AppCompatActivity {
     private void setupHideMode() {
         binding.modeHeaderText.setText(R.string.hide_mode_header);
         binding.hideAppsButton.setVisibility(View.VISIBLE);
-        binding.pinButton.setVisibility(View.VISIBLE);
         binding.restoreAppsButton.setVisibility(View.GONE);
         updatePinState();
 
@@ -223,6 +276,7 @@ public class MainActivity extends AppCompatActivity {
                 if (gen != listGeneration) return;
                 adapter = new AppsAdapter(appsList, excludeAppsStorage);
                 binding.recyclerView.setAdapter(adapter);
+                updateEmptyState(appsList.isEmpty(), R.string.empty_hide_list);
             });
         });
     }
@@ -246,19 +300,27 @@ public class MainActivity extends AppCompatActivity {
                 }
                 adapter = new AppsAdapter(hiddenApps, null);
                 binding.recyclerView.setAdapter(adapter);
+                updateEmptyState(false, 0);
             });
         });
+    }
+
+    private void updateEmptyState(boolean isEmpty, int messageRes) {
+        if (isEmpty) {
+            binding.emptyStateText.setText(messageRes);
+            binding.emptyStateText.setVisibility(View.VISIBLE);
+        } else {
+            binding.emptyStateText.setVisibility(View.GONE);
+        }
     }
 
     // ── PIN state ──────────────────────────────────────────────────────
 
     private void updatePinState() {
         if (pinStorage.hasPin()) {
-            binding.pinButton.setText(R.string.change_pin);
-            binding.pinHintText.setVisibility(View.GONE);
+            binding.pinHintRow.setVisibility(View.GONE);
         } else {
-            binding.pinButton.setText(R.string.set_pin);
-            binding.pinHintText.setVisibility(View.VISIBLE);
+            binding.pinHintRow.setVisibility(View.VISIBLE);
             binding.pinHintText.setText(getString(R.string.default_pin_hint, PinStorage.DEFAULT_PIN));
         }
     }
@@ -283,8 +345,9 @@ public class MainActivity extends AppCompatActivity {
         binding.hideAppsButton.setAlpha(dimAlpha);
         binding.restoreAppsButton.setEnabled(enabled);
         binding.restoreAppsButton.setAlpha(dimAlpha);
-        binding.pinButton.setEnabled(enabled);
-        binding.pinButton.setAlpha(dimAlpha);
+        binding.settingsButton.setEnabled(enabled);
+        binding.settingsButton.setAlpha(dimAlpha);
+        binding.pinHintRow.setEnabled(enabled);
 
         // Tabs
         binding.tabHide.setEnabled(enabled);

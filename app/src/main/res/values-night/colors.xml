@@ -26,4 +26,9 @@
     <color name="tab_disabled">#555555</color>
     <color name="adb_ok">#66BB6A</color>
     <color name="adb_error">#EF5350</color>
+
+    <color name="accent">#42A5F5</color>
+    <color name="action_hide">#FFA726</color>
+    <color name="action_restore">#66BB6A</color>
+    <color name="divider">#3A3A3A</color>
 </resources>

@@ -24,134 +24,185 @@
     android:background="@color/background"
     android:orientation="vertical">
 
-    <!-- Header -->
-    <TextView
-        android:id="@+id/headerText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/header_background"
-        android:gravity="start"
-        android:paddingHorizontal="24sp"
-        android:paddingVertical="12sp"
-        android:text="@string/app_name"
-        android:textColor="@color/text_primary"
-        android:textSize="32sp"
-        android:textStyle="bold" />
-
-    <!-- ADB status -->
-    <TextView
-        android:id="@+id/adbStatusText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/header_background"
-        android:gravity="start"
-        android:paddingHorizontal="24sp"
-        android:paddingBottom="8sp"
-        android:text="@string/adb_checking"
-        android:textColor="@color/text_secondary"
-        android:textSize="16sp" />
-
-    <!-- Action buttons -->
+    <!-- Header: title + settings icon -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/header_background"
+        android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingTop="4sp"
-        android:paddingBottom="8sp">
+        android:paddingHorizontal="24sp"
+        android:paddingVertical="12sp">
+
+        <TextView
+            android:id="@+id/headerText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="start"
+            android:text="@string/app_name"
+            android:textColor="@color/text_primary"
+            android:textSize="32sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/settingsButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/settings_description"
+            android:scaleType="centerInside"
+            android:src="@android:drawable/ic_menu_preferences"
+            android:tint="@color/text_primary"
+            tools:ignore="UseAppTint" />
+    </LinearLayout>
+
+    <!-- Connection status — single line, tappable for full details -->
+    <TextView
+        android:id="@+id/connectionStatusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/selectableItemBackground"
+        android:ellipsize="end"
+        android:gravity="start|center_vertical"
+        android:minHeight="36dp"
+        android:paddingHorizontal="24sp"
+        android:paddingVertical="8sp"
+        android:singleLine="true"
+        android:text="@string/connection_checking"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <!-- Tab bar with active-state indicator under each tab -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/header_background"
+        android:orientation="horizontal">
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1">
+
+            <TextView
+                android:id="@+id/tabHide"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:paddingVertical="12sp"
+                android:text="@string/tab_hide"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <View
+                android:id="@+id/tabHideIndicator"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:layout_gravity="bottom"
+                android:background="@color/accent" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1">
+
+            <TextView
+                android:id="@+id/tabRestore"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:paddingVertical="12sp"
+                android:text="@string/tab_restore"
+                android:textColor="@color/text_secondary"
+                android:textSize="20sp" />
+
+            <View
+                android:id="@+id/tabRestoreIndicator"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:layout_gravity="bottom"
+                android:background="@android:color/transparent" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- Action buttons row (on regular background, not header) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16sp"
+        android:paddingVertical="12sp">
 
         <Button
             android:id="@+id/hideAppsButton"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16sp"
-            android:paddingHorizontal="16sp"
-            android:paddingVertical="8sp"
+            android:layout_marginEnd="8sp"
+            android:layout_weight="1"
+            android:background="@color/action_hide"
+            android:paddingVertical="10sp"
             android:singleLine="true"
             android:text="@string/hide_apps"
-            android:background="@android:color/holo_red_dark"
-            android:textColor="@android:color/white"
-            tools:ignore="ButtonStyle" />
-
-        <Button
-            android:id="@+id/pinButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16sp"
-            android:paddingHorizontal="16sp"
-            android:paddingVertical="8sp"
-            android:singleLine="true"
-            android:text="@string/set_pin"
-            android:background="@android:color/holo_blue_dark"
             android:textColor="@android:color/white"
             tools:ignore="ButtonStyle" />
 
         <Button
             android:id="@+id/restoreAppsButton"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16sp"
-            android:paddingHorizontal="16sp"
-            android:paddingVertical="8sp"
+            android:layout_marginStart="8sp"
+            android:layout_weight="1"
+            android:background="@color/action_restore"
+            android:paddingVertical="10sp"
             android:singleLine="true"
             android:text="@string/restore_apps"
-            android:background="@android:color/holo_green_dark"
             android:textColor="@android:color/white"
             tools:ignore="ButtonStyle" />
-
     </LinearLayout>
 
-    <!-- Tab bar -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:background="@color/header_background">
-
-        <TextView
-            android:id="@+id/tabHide"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:paddingVertical="12sp"
-            android:text="@string/tab_hide"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:background="@color/tab_active" />
-
-        <TextView
-            android:id="@+id/tabRestore"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:paddingVertical="12sp"
-            android:text="@string/tab_restore"
-            android:textSize="20sp"
-            android:textColor="@color/text_secondary"
-            android:background="@color/tab_inactive" />
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/pinHintText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="24sp"
-        android:paddingVertical="4sp"
-        android:textColor="@color/text_secondary"
-        android:textSize="14sp"
-        android:visibility="gone" />
-
+    <!-- Mode header — instructional, secondary weight -->
     <TextView
         android:id="@+id/modeHeaderText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="8sp"
-        android:textSize="24sp"
-        android:textColor="@color/text_primary"
-        android:text="@string/hide_mode_header" />
+        android:paddingHorizontal="16sp"
+        android:paddingBottom="4sp"
+        android:text="@string/hide_mode_header"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <!-- PIN hint with info icon (only shown when no custom PIN set); tappable to open PIN dialog -->
+    <LinearLayout
+        android:id="@+id/pinHintRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16sp"
+        android:paddingVertical="6sp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginEnd="8sp"
+            android:contentDescription="@null"
+            android:src="@android:drawable/ic_dialog_info"
+            android:tint="@color/accent"
+            tools:ignore="UseAppTint" />
+
+        <TextView
+            android:id="@+id/pinHintText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
+    </LinearLayout>
 
     <!-- App list with progress overlay shown during ADB operations -->
     <FrameLayout
@@ -162,9 +213,18 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerView"
             android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <!-- Empty state shown when there are no items in the current mode -->
+        <TextView
+            android:id="@+id/emptyStateText"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:textSize="20sp"
-            android:textColor="@color/text_primary" />
+            android:gravity="center"
+            android:padding="32dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp"
+            android:visibility="gone" />
 
         <!-- Touch interceptor — visible only during ADB ops to block list interaction -->
         <View

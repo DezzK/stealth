@@ -4,8 +4,8 @@
     <string name="notification_content">Stealth Mode service is running</string>
     <string name="tab_hide">Hide</string>
     <string name="tab_restore">Restore</string>
-    <string name="hide_mode_header">Select apps to hide in Stealth Mode. Uncheck apps you want to keep visible:</string>
-    <string name="restore_mode_header">Select hidden apps to restore</string>
+    <string name="hide_mode_header">Check the apps you want to hide</string>
+    <string name="restore_mode_header">Check the apps you want to restore</string>
     <string name="no_hidden_apps">No hidden apps to restore</string>
 
     <string name="copyright_notice" translatable="false">© 2025 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
@@ -38,6 +38,16 @@
     <string name="apps_hide_partial">%1$d apps hidden, %2$d failed</string>
     <string name="apps_restore_partial">%1$d apps restored, %2$d failed</string>
 
+    <string name="empty_hide_list">No user apps to hide</string>
+    <string name="settings_description">Settings</string>
+    <string name="connection_details_title">Connection details</string>
+    <string name="connection_details_intro">Could not reach the head unit on any expected service.</string>
+    <string name="connection_error_refused">Connection refused</string>
+    <string name="connection_error_unreachable">Host unreachable</string>
+    <string name="connection_error_timeout">Connection timeout</string>
+    <string name="connection_error_pm_unavailable">pm command not available</string>
+    <string name="connection_error_unknown">Failed</string>
+
     <string name="pin_required_dialog_message">A PIN code is required before hiding apps. After hiding, the app icon will disappear. To reveal it again, open the dialer, enter your PIN, and press the call button.\n\nSet a numeric PIN (minimum 3 digits):</string>
 
     <string name="permissions_required_title">Permissions required</string>
@@ -47,7 +57,7 @@
     <string name="permissions_open_settings_message">Phone call permissions were previously denied. To grant them, go to the app settings and enable them manually. Without these permissions, after hiding you will not be able to reveal the app by dialing PIN.</string>
     <string name="open_settings">Open settings</string>
 
-    <string name="adb_checking">ADB: checking…</string>
-    <string name="adb_connected">ADB: connected (port %s)</string>
-    <string name="adb_error">ADB: unavailable — %s</string>
+    <string name="connection_checking">Connection: checking…</string>
+    <string name="connection_connected">Connected via %s</string>
+    <string name="connection_error">Not connected — tap for details</string>
 </resources>

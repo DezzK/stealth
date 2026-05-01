@@ -4,8 +4,8 @@
     <string name="notification_content">Служба сервисного режима работает</string>
     <string name="tab_hide">Скрыть</string>
     <string name="tab_restore">Восстановить</string>
-    <string name="hide_mode_header">Выберите приложения для скрытия в сервисном режиме. Снимите отметку с приложений, которые хотите оставить видимыми:</string>
-    <string name="restore_mode_header">Выберите скрытые приложения для восстановления</string>
+    <string name="hide_mode_header">Отметьте приложения для скрытия</string>
+    <string name="restore_mode_header">Отметьте приложения для восстановления</string>
     <string name="no_hidden_apps">Нет скрытых приложений для восстановления</string>
     <string name="apps_hidden_successfully">Приложения успешно скрыты</string>
     <string name="apps_hide_error">Ошибка скрытия приложения: %s</string>
@@ -36,6 +36,16 @@
     <string name="apps_hide_partial">%1$d приложений скрыто, %2$d не удалось</string>
     <string name="apps_restore_partial">%1$d приложений восстановлено, %2$d не удалось</string>
 
+    <string name="empty_hide_list">Нет пользовательских приложений для скрытия</string>
+    <string name="settings_description">Настройки</string>
+    <string name="connection_details_title">Детали подключения</string>
+    <string name="connection_details_intro">Ни одна из ожидаемых служб на головном устройстве не доступна.</string>
+    <string name="connection_error_refused">Соединение отклонено</string>
+    <string name="connection_error_unreachable">Хост недоступен</string>
+    <string name="connection_error_timeout">Таймаут подключения</string>
+    <string name="connection_error_pm_unavailable">Команда pm недоступна</string>
+    <string name="connection_error_unknown">Ошибка</string>
+
     <string name="pin_required_dialog_message">Для скрытия приложений необходимо задать PIN-код. После скрытия иконка приложения исчезнет. Чтобы снова её отобразить, откройте штатную звонилку, наберите ваш PIN-код и нажмите кнопку вызова.\n\nЗадайте цифровой PIN-код (минимум 3 цифры):</string>
 
     <string name="permissions_required_title">Требуются разрешения</string>
@@ -45,7 +55,7 @@
     <string name="permissions_open_settings_message">Разрешения на телефонные вызовы были ранее отклонены. Чтобы их выдать, перейдите в настройки приложения и включите их вручную. Без этих разрешений после скрытия вы не сможете отобразить приложение, набрав PIN-код.</string>
     <string name="open_settings">Открыть настройки</string>
 
-    <string name="adb_checking">ADB: проверка…</string>
-    <string name="adb_connected">ADB: подключено (порт %s)</string>
-    <string name="adb_error">ADB: недоступно — %s</string>
+    <string name="connection_checking">Подключение: проверка…</string>
+    <string name="connection_connected">Подключено через %s</string>
+    <string name="connection_error">Нет подключения — нажмите для деталей</string>
 </resources>
