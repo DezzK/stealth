@@ -22,7 +22,7 @@ import java.nio.charset.StandardCharsets;
  */
 public class AdbTransport implements ShellTransport {
     private static final String TAG = "AdbTransport";
-    private static final int CONNECT_TIMEOUT_MS = 5000;
+    private static final int CONNECT_TIMEOUT_MS = 1000;
     private static final String KEY_FILE_PREFIX = "adb_key";
 
     private static final AdbBase64 ADB_BASE64 = data -> Base64.encodeToString(data, Base64.DEFAULT);
@@ -32,28 +32,30 @@ public class AdbTransport implements ShellTransport {
 
     private final Socket socket;
     private final AdbConnection connection;
+    private final String host;
     private final int port;
 
-    private AdbTransport(Socket socket, AdbConnection connection, int port) {
+    private AdbTransport(Socket socket, AdbConnection connection, String host, int port) {
         this.socket = socket;
         this.connection = connection;
+        this.host = host;
         this.port = port;
     }
 
     /**
-     * Connect to ADB on the given port and perform the ADB handshake.
+     * Connect to ADB on the given host and port and perform the ADB handshake.
      * The RSA key pair is loaded or generated on first call and cached.
      */
-    public static AdbTransport connect(Context context, int port) throws Exception {
+    public static AdbTransport connect(Context context, String host, int port) throws Exception {
         AdbCrypto crypto = getOrCreateCrypto(context);
 
         Socket socket = new Socket();
         AdbConnection connection = null;
         try {
-            socket.connect(new InetSocketAddress("127.0.0.1", port), CONNECT_TIMEOUT_MS);
+            socket.connect(new InetSocketAddress(host, port), CONNECT_TIMEOUT_MS);
             connection = AdbConnection.create(socket, crypto);
             connection.connect();
-            return new AdbTransport(socket, connection, port);
+            return new AdbTransport(socket, connection, host, port);
         } catch (Exception e) {
             if (connection != null) {
                 try { connection.close(); } catch (Exception ignored) {}
@@ -65,7 +67,7 @@ public class AdbTransport implements ShellTransport {
 
     @Override
     public String describe() {
-        return "adb port " + port;
+        return "ADB " + host + ":" + port;
     }
 
     @Override

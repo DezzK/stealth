@@ -8,7 +8,7 @@
     <string name="restore_mode_header">Check the apps you want to restore</string>
     <string name="no_hidden_apps">No hidden apps to restore</string>
 
-    <string name="copyright_notice" translatable="false">© 2025 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
+    <string name="copyright_notice" translatable="false">© 2025-2026 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
     <string name="apps_hidden_successfully">Apps hidden successfully</string>
     <string name="apps_hide_error">Apps hide error: %s</string>
     <string name="apps_restored_successfully">Apps restored successfully</string>
@@ -42,6 +42,11 @@
     <string name="settings_description">Settings</string>
     <string name="connection_details_title">Connection details</string>
     <string name="connection_details_intro">Could not reach the head unit on any expected service.</string>
+    <string name="connection_details_intro_success">Probed the following services:</string>
+    <string name="connection_attempt_success">connected</string>
+    <string name="connection_attempt_active">in use</string>
+    <string name="connection_attempt_also_works">also works</string>
+    <string name="connection_details_in_progress">…still probing more endpoints</string>
     <string name="connection_error_refused">Connection refused</string>
     <string name="connection_error_unreachable">Host unreachable</string>
     <string name="connection_error_timeout">Connection timeout</string>

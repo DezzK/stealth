@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets;
  * detected.
  */
 public class TelnetTransport implements ShellTransport {
-    private static final int CONNECT_TIMEOUT_MS = 5000;
+    private static final int CONNECT_TIMEOUT_MS = 1000;
     private static final int READ_TIMEOUT_MS = 5000;
     private static final int BANNER_DRAIN_MS = 500;
     private static final int TRAILING_DRAIN_MS = 200;

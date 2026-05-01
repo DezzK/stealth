@@ -40,6 +40,11 @@
     <string name="settings_description">Настройки</string>
     <string name="connection_details_title">Детали подключения</string>
     <string name="connection_details_intro">Ни одна из ожидаемых служб на головном устройстве не доступна.</string>
+    <string name="connection_details_intro_success">Опрошены следующие службы:</string>
+    <string name="connection_attempt_success">подключено</string>
+    <string name="connection_attempt_active">используется</string>
+    <string name="connection_attempt_also_works">тоже работает</string>
+    <string name="connection_details_in_progress">…проверка остальных служб продолжается</string>
     <string name="connection_error_refused">Соединение отклонено</string>
     <string name="connection_error_unreachable">Хост недоступен</string>
     <string name="connection_error_timeout">Таймаут подключения</string>

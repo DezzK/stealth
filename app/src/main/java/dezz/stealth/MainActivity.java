@@ -1,5 +1,5 @@
 /*
- * Copyright © 2025 Dezz (https://github.com/DezzK)
+ * Copyright © 2025-2026 Dezz (https://github.com/DezzK)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.method.LinkMovementMethod;
 import android.view.View;
+import android.widget.ScrollView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -63,8 +65,12 @@ public class MainActivity extends AppCompatActivity {
     /** Incremented on every mode switch — used to discard stale list-build results. */
     private int listGeneration = 0;
 
-    /** Last connection probe attempts — shown in dialog on tap. Null while connected or never checked. */
+    /** Latest snapshot of probe attempts — refreshed live as probes complete. */
     private List<ShellExecutor.ConnectionAttempt> lastConnectionAttempts = null;
+    private boolean connectionProbingFinished = false;
+
+    /** Live reference to the connection-details dialog body when open, null otherwise. */
+    private TextView connectionDetailsBody;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -153,18 +159,54 @@ public class MainActivity extends AppCompatActivity {
     private void showConnectionDetailsIfAny() {
         if (lastConnectionAttempts == null || lastConnectionAttempts.isEmpty()) return;
 
-        StringBuilder body = new StringBuilder();
-        body.append(getString(R.string.connection_details_intro));
-        body.append("\n");
-        for (ShellExecutor.ConnectionAttempt a : lastConnectionAttempts) {
-            body.append("\n• ").append(a.label).append(" — ").append(simplifyConnectionError(a.rawError));
-        }
+        // Custom view so we can keep a reference to the body TextView and refresh it
+        // live as more probes complete in the background.
+        ScrollView scrollView = new ScrollView(this);
+        TextView body = new TextView(this);
+        int pad = (int) (16 * getResources().getDisplayMetrics().density);
+        body.setPadding(pad * 2, pad, pad * 2, pad);
+        body.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        body.setTextSize(14);
+        body.setLineSpacing(0, 1.2f);
+        scrollView.addView(body);
+        connectionDetailsBody = body;
+
+        renderConnectionDetailsBody();
 
         new AlertDialog.Builder(this)
                 .setTitle(R.string.connection_details_title)
-                .setMessage(body.toString())
+                .setView(scrollView)
                 .setPositiveButton(android.R.string.ok, null)
+                .setOnDismissListener(d -> connectionDetailsBody = null)
                 .show();
+    }
+
+    /** Renders the dialog body from {@link #lastConnectionAttempts}. No-op if dialog is closed. */
+    private void renderConnectionDetailsBody() {
+        TextView target = connectionDetailsBody;
+        if (target == null || lastConnectionAttempts == null) return;
+
+        boolean anySuccess = findActive(lastConnectionAttempts) != null;
+
+        StringBuilder body = new StringBuilder();
+        body.append(getString(anySuccess
+                ? R.string.connection_details_intro_success
+                : R.string.connection_details_intro));
+        body.append("\n");
+        for (ShellExecutor.ConnectionAttempt a : lastConnectionAttempts) {
+            body.append("\n• ").append(a.label).append(" — ");
+            if (a.isActive) {
+                body.append(getString(R.string.connection_attempt_active));
+            } else if (a.isSuccess()) {
+                body.append(getString(R.string.connection_attempt_also_works));
+            } else {
+                body.append(simplifyConnectionError(a.rawError));
+            }
+        }
+        if (!connectionProbingFinished) {
+            body.append("\n\n").append(getString(R.string.connection_details_in_progress));
+        }
+        target.setText(body.toString());
     }
 
     /**
@@ -194,27 +236,37 @@ public class MainActivity extends AppCompatActivity {
         binding.connectionStatusText.setText(R.string.connection_checking);
         binding.connectionStatusText.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
         lastConnectionAttempts = null;
+        connectionProbingFinished = false;
 
-        ShellExecutor shell = ShellExecutor.getInstance(this);
-        shell.checkConnection(new ShellExecutor.StatusCallback() {
-            @Override
-            public void onSuccess(String description) {
-                postIfAlive(() -> {
-                    lastConnectionAttempts = null;
-                    binding.connectionStatusText.setText(getString(R.string.connection_connected, description));
-                    binding.connectionStatusText.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.adb_ok));
-                });
-            }
+        ShellExecutor.getInstance(this).checkConnection((attempts, finished) -> postIfAlive(() -> {
+            lastConnectionAttempts = attempts;
+            connectionProbingFinished = finished;
+            updateConnectionStatusText();
+            renderConnectionDetailsBody();
+        }));
+    }
 
-            @Override
-            public void onError(List<ShellExecutor.ConnectionAttempt> attempts) {
-                postIfAlive(() -> {
-                    lastConnectionAttempts = attempts;
-                    binding.connectionStatusText.setText(R.string.connection_error);
-                    binding.connectionStatusText.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.adb_error));
-                });
-            }
-        });
+    private void updateConnectionStatusText() {
+        ShellExecutor.ConnectionAttempt active = findActive(lastConnectionAttempts);
+        if (active != null) {
+            binding.connectionStatusText.setText(getString(R.string.connection_connected, active.label));
+            binding.connectionStatusText.setTextColor(ContextCompat.getColor(this, R.color.adb_ok));
+        } else if (connectionProbingFinished) {
+            binding.connectionStatusText.setText(R.string.connection_error);
+            binding.connectionStatusText.setTextColor(ContextCompat.getColor(this, R.color.adb_error));
+        } else {
+            binding.connectionStatusText.setText(R.string.connection_checking);
+            binding.connectionStatusText.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
+        }
+    }
+
+    /** Find the transport actually in use for batch operations (the CAS-winner). */
+    private static ShellExecutor.ConnectionAttempt findActive(List<ShellExecutor.ConnectionAttempt> attempts) {
+        if (attempts == null) return null;
+        for (ShellExecutor.ConnectionAttempt a : attempts) {
+            if (a.isActive) return a;
+        }
+        return null;
     }
 
     // ── Mode switching ────────────────────────────────────────────────

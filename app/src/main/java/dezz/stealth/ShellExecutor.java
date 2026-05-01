@@ -4,28 +4,43 @@ import android.content.Context;
 import android.util.Log;
 
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
  * Discovers a working {@link ShellTransport} (Telnet or ADB) and runs pm commands through it.
  * Transport-agnostic: each transport encapsulates its own protocol details.
+ * <p>
+ * Discovery probes Telnet (port 23) and ADB (5555/7777) on every up IPv4 interface
+ * (loopback + each external interface) in parallel. The status callback is invoked
+ * incrementally as probes finish, so the UI can:
+ * <ul>
+ *     <li>flip the connection indicator the moment the first probe succeeds, while</li>
+ *     <li>still build up the full diagnostic list for the details dialog (which can
+ *         live-update if it's already open).</li>
+ * </ul>
  */
 public class ShellExecutor {
     private static final String TAG = "ShellExecutor";
 
-    // Telnet on the head unit itself — used by devices with a dynamic ADB port (e.g. Geely Cityray).
-    // Only loopback is meaningful here: stock Android can't resolve .local (mDNS) addresses anyway.
-    private static final String TELNET_HOST = "127.0.0.1";
     private static final int TELNET_PORT = 23;
-
-    // ADB candidates (fallback)
     private static final int[] ADB_PORTS = {5555, 7777};
+
+    /** Soft cap on the probe pool — devices with many virtual interfaces won't blow up. */
+    private static final int MAX_PARALLEL_PROBES = 16;
 
     private static volatile ShellExecutor instance;
 
@@ -49,22 +64,39 @@ public class ShellExecutor {
     }
 
     /**
-     * One probed endpoint and the error from probing it. Carried in the callback so the
-     * UI layer can format/localize the message rather than parsing a raw concatenated string.
+     * One probed endpoint and the outcome of probing it.
+     * <p>
+     * {@code rawError == null} marks a successful probe. Among multiple successes, exactly
+     * one will have {@code isActive == true} — that's the transport actually in use for
+     * batch operations. The others "would have worked too" but lost the CAS race.
      */
     public static class ConnectionAttempt {
         public final String label;     // e.g. "Telnet 127.0.0.1:23" or "ADB 127.0.0.1:5555"
-        public final String rawError;  // raw exception/probe message, may be null
+        public final String rawError;  // null = success; non-null = raw failure message
+        public final boolean isActive; // true only for the transport currently in use
 
-        ConnectionAttempt(String label, String rawError) {
+        ConnectionAttempt(String label, String rawError, boolean isActive) {
             this.label = label;
             this.rawError = rawError;
+            this.isActive = isActive;
         }
+
+        public boolean isSuccess() { return rawError == null; }
     }
 
+    /**
+     * Receives incremental discovery results.
+     */
     public interface StatusCallback {
-        void onSuccess(String description);
-        void onError(List<ConnectionAttempt> attempts);
+        /**
+         * Fires every time a probe completes (and once at the end with {@code finished == true}).
+         *
+         * @param attempts immutable snapshot, sorted by label, of every probe that has
+         *                 completed so far. May contain at most one success entry — if
+         *                 present, it is the active transport.
+         * @param finished true on the final call: every probe has completed.
+         */
+        void onUpdate(List<ConnectionAttempt> attempts, boolean finished);
     }
 
     public interface BatchCallback {
@@ -82,7 +114,20 @@ public class ShellExecutor {
         boolean test(ShellTransport t) throws Exception;
     }
 
-    private final Executor executor = Executors.newSingleThreadExecutor();
+    /** A single (label, factory, probe) tuple representing one endpoint to try. */
+    private static class Candidate {
+        final String label;
+        final TransportFactory factory;
+        final ProbeFn probe;
+
+        Candidate(String label, TransportFactory factory, ProbeFn probe) {
+            this.label = label;
+            this.factory = factory;
+            this.probe = probe;
+        }
+    }
+
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Context appContext;
 
     private ShellExecutor(Context appContext) {
@@ -109,62 +154,133 @@ public class ShellExecutor {
 
     public void checkConnection(StatusCallback callback) {
         executor.execute(() -> {
-            List<ConnectionAttempt> attempts = new ArrayList<>();
-
-            // 1. Try Telnet first (verify pm actually works via "pm path android")
-            {
-                TransportFactory factory = () -> TelnetTransport.connect(TELNET_HOST, TELNET_PORT);
-                String description = tryTransport(
-                        factory,
-                        t -> t.exec("pm path android").contains("package:"),
-                        attempts,
-                        "Telnet " + TELNET_HOST + ":" + TELNET_PORT);
-                if (description != null) {
-                    activeFactory = factory;
-                    callback.onSuccess(description);
-                    return;
-                }
+            List<Candidate> candidates = buildCandidates();
+            if (candidates.isEmpty()) {
+                callback.onUpdate(Collections.emptyList(), true);
+                return;
             }
-
-            // 2. Fall back to ADB
-            for (int port : ADB_PORTS) {
-                TransportFactory factory = () -> AdbTransport.connect(appContext, port);
-                String description = tryTransport(
-                        factory,
-                        t -> { t.exec("echo ok"); return true; },
-                        attempts,
-                        "ADB 127.0.0.1:" + port);
-                if (description != null) {
-                    activeFactory = factory;
-                    callback.onSuccess(description);
-                    return;
-                }
-            }
-
-            callback.onError(attempts);
+            startProbing(candidates, callback);
         });
     }
 
     /**
-     * Try to open and probe a transport. Returns describe() on success, null on failure
-     * (a {@link ConnectionAttempt} describing the failure is appended to {@code attempts}).
+     * Build the full candidate set: every (host × transport × port) combo.
+     * Hosts include loopback plus every IPv4 address bound to an "up" non-loopback interface.
      */
-    private String tryTransport(TransportFactory factory, ProbeFn probe,
-                                List<ConnectionAttempt> attempts, String label) {
-        ShellTransport transport = null;
-        try {
-            transport = factory.open();
-            if (probe.test(transport)) {
-                return transport.describe();
+    private List<Candidate> buildCandidates() {
+        List<String> hosts = candidateHosts();
+        List<Candidate> result = new ArrayList<>();
+        for (String host : hosts) {
+            // Telnet on port 23
+            result.add(new Candidate(
+                    "Telnet " + host + ":" + TELNET_PORT,
+                    () -> TelnetTransport.connect(host, TELNET_PORT),
+                    t -> t.exec("pm path android").contains("package:")));
+            // ADB on each known port
+            for (int port : ADB_PORTS) {
+                result.add(new Candidate(
+                        "ADB " + host + ":" + port,
+                        () -> AdbTransport.connect(appContext, host, port),
+                        t -> { t.exec("echo ok"); return true; }));
             }
-            attempts.add(new ConnectionAttempt(label, "pm not available"));
-        } catch (Exception e) {
-            Log.d(TAG, label + " failed: " + e.getClass().getSimpleName() + ": " + e.getMessage());
-            attempts.add(new ConnectionAttempt(label, classifyFailure(e)));
-        } finally {
-            if (transport != null) transport.close();
         }
-        return null;
+        return result;
+    }
+
+    /**
+     * IPv4 addresses to probe: loopback first, then every IPv4 bound to an "up" interface.
+     * Some daemons bind only to a specific external IP rather than 0.0.0.0, so we have to try them.
+     */
+    private static List<String> candidateHosts() {
+        Set<String> hosts = new LinkedHashSet<>();
+        hosts.add("127.0.0.1");
+        try {
+            Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces();
+            if (ifaces != null) {
+                while (ifaces.hasMoreElements()) {
+                    NetworkInterface ni = ifaces.nextElement();
+                    if (!ni.isUp() || ni.isLoopback()) continue;
+                    Enumeration<InetAddress> addrs = ni.getInetAddresses();
+                    while (addrs.hasMoreElements()) {
+                        InetAddress a = addrs.nextElement();
+                        if (a instanceof Inet4Address) {
+                            hosts.add(a.getHostAddress());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "Failed to enumerate network interfaces: " + e.getMessage());
+        }
+        return new ArrayList<>(hosts);
+    }
+
+    /**
+     * Submit every candidate to a probe pool and run them all to completion. The status
+     * callback fires after each probe (sorted snapshot of all completed probes so far);
+     * {@code activeFactory} is set as soon as the first probe succeeds.
+     * <p>
+     * This is fire-and-forget: the calling thread (the single executor) returns
+     * immediately after submission so subsequent disable/restore operations don't queue
+     * behind a long discovery.
+     */
+    private void startProbing(List<Candidate> candidates, StatusCallback callback) {
+        int total = candidates.size();
+        int poolSize = Math.min(total, MAX_PARALLEL_PROBES);
+        ExecutorService pool = Executors.newFixedThreadPool(poolSize);
+
+        AtomicReferenceArray<ConnectionAttempt> slots = new AtomicReferenceArray<>(total);
+        AtomicInteger remaining = new AtomicInteger(total);
+        AtomicReference<TransportFactory> winnerFactory = new AtomicReference<>();
+
+        for (int i = 0; i < total; i++) {
+            final int idx = i;
+            final Candidate c = candidates.get(i);
+            pool.submit(() -> {
+                ShellTransport transport = null;
+                try {
+                    transport = c.factory.open();
+                    if (c.probe.test(transport)) {
+                        // First success captures the active factory; later successes are
+                        // recorded as "also works" entries (isActive=false) and don't
+                        // override the chosen one.
+                        boolean isActive = winnerFactory.compareAndSet(null, c.factory);
+                        if (isActive) {
+                            activeFactory = c.factory;
+                        }
+                        slots.set(idx, new ConnectionAttempt(c.label, null, isActive));
+                    } else {
+                        slots.set(idx, new ConnectionAttempt(c.label, "pm not available", false));
+                    }
+                } catch (Exception e) {
+                    Log.d(TAG, c.label + " failed: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                    slots.set(idx, new ConnectionAttempt(c.label, classifyFailure(e), false));
+                } finally {
+                    if (transport != null) {
+                        try { transport.close(); } catch (Exception ignored) {}
+                    }
+                    boolean finished = remaining.decrementAndGet() == 0;
+                    callback.onUpdate(snapshotSorted(slots), finished);
+                    if (finished) {
+                        pool.shutdown();
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * Snapshot the slots array, drop unfilled slots, and sort by label so the UI sees
+     * a stable order regardless of probe completion order.
+     */
+    private static List<ConnectionAttempt> snapshotSorted(AtomicReferenceArray<ConnectionAttempt> slots) {
+        List<ConnectionAttempt> out = new ArrayList<>(slots.length());
+        for (int i = 0; i < slots.length(); i++) {
+            ConnectionAttempt a = slots.get(i);
+            if (a != null) out.add(a);
+        }
+        out.sort((x, y) -> x.label.compareTo(y.label));
+        return out;
     }
 
     /**
