@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AppsToHideStorage {
-    private SharedPreferences prefs;
+    private final SharedPreferences prefs;
 
     public AppsToHideStorage(Context context) {
         final Context deviceContext = context.getApplicationContext().createDeviceProtectedStorageContext();

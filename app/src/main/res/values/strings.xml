@@ -14,6 +14,7 @@
     <string name="apps_restored_successfully">Apps restored successfully</string>
     <string name="apps_restore_error">Apps restore error: %s</string>
     <string name="no_apps_selected">No apps selected</string>
+    <string name="list_loading">Loading apps list…</string>
     <string name="hide_apps">Hide selected apps</string>
     <string name="restore_apps">Restore selected apps</string>
 
