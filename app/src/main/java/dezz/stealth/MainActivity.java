@@ -150,8 +150,8 @@ public class MainActivity extends AppCompatActivity {
         binding.adbStatusText.setText(R.string.adb_checking);
         binding.adbStatusText.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
 
-        AdbHelper adbHelper = AdbHelper.getInstance(this);
-        adbHelper.checkConnection(new AdbHelper.AdbCallback() {
+        ShellExecutor shell = ShellExecutor.getInstance(this);
+        shell.checkConnection(new ShellExecutor.StatusCallback() {
             @Override
             public void onSuccess(String port) {
                 mainHandler.post(() -> {
@@ -555,10 +555,10 @@ public class MainActivity extends AppCompatActivity {
         setAdbOperationInProgress(true);
         List<String> packageNames = new ArrayList<>(packagesToDisable.keySet());
 
-        AdbHelper adbHelper = AdbHelper.getInstance(this);
-        adbHelper.disableApps(packageNames, new AdbHelper.AdbBatchCallback() {
+        ShellExecutor shell = ShellExecutor.getInstance(this);
+        shell.disableApps(packageNames, new ShellExecutor.BatchCallback() {
             @Override
-            public void onResult(AdbHelper.AdbResult result) {
+            public void onResult(ShellExecutor.BatchResult result) {
                 mainHandler.post(() -> {
                     setAdbOperationInProgress(false);
 
@@ -624,10 +624,10 @@ public class MainActivity extends AppCompatActivity {
 
         setAdbOperationInProgress(true);
 
-        AdbHelper adbHelper = AdbHelper.getInstance(this);
-        adbHelper.enableApps(packagesToEnable, new AdbHelper.AdbBatchCallback() {
+        ShellExecutor shell = ShellExecutor.getInstance(this);
+        shell.enableApps(packagesToEnable, new ShellExecutor.BatchCallback() {
             @Override
-            public void onResult(AdbHelper.AdbResult result) {
+            public void onResult(ShellExecutor.BatchResult result) {
                 mainHandler.post(() -> {
                     setAdbOperationInProgress(false);
 
