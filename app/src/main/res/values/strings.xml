@@ -15,6 +15,7 @@
     <string name="apps_restore_error">Apps restore error: %s</string>
     <string name="no_apps_selected">No apps selected</string>
     <string name="list_loading">Loading apps list…</string>
+    <string name="no_connection_detected">No ADB or Telnet connection detected. Cannot hide or restore apps.</string>
     <string name="hide_apps">Hide selected apps</string>
     <string name="restore_apps">Restore selected apps</string>
 

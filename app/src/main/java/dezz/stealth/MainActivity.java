@@ -275,12 +275,25 @@ public class MainActivity extends AppCompatActivity {
 
     private void setAdbOperationInProgress(boolean inProgress) {
         adbOperationInProgress = inProgress;
-        binding.hideAppsButton.setEnabled(!inProgress);
-        binding.hideAppsButton.setAlpha(!inProgress ? 1f : 0.5f);
-        binding.restoreAppsButton.setEnabled(!inProgress);
-        binding.restoreAppsButton.setAlpha(!inProgress ? 1f : 0.5f);
-        binding.tabHide.setEnabled(!inProgress);
-        binding.tabRestore.setEnabled(!inProgress && appsToHideStorage.hasHiddenApps());
+        float dimAlpha = inProgress ? 0.5f : 1f;
+        boolean enabled = !inProgress;
+
+        // Action buttons
+        binding.hideAppsButton.setEnabled(enabled);
+        binding.hideAppsButton.setAlpha(dimAlpha);
+        binding.restoreAppsButton.setEnabled(enabled);
+        binding.restoreAppsButton.setAlpha(dimAlpha);
+        binding.pinButton.setEnabled(enabled);
+        binding.pinButton.setAlpha(dimAlpha);
+
+        // Tabs
+        binding.tabHide.setEnabled(enabled);
+        binding.tabRestore.setEnabled(enabled && appsToHideStorage.hasHiddenApps());
+
+        // List + progress: dim the list and intercept touches with overlay
+        binding.recyclerView.setAlpha(dimAlpha);
+        binding.listOverlay.setVisibility(inProgress ? View.VISIBLE : View.GONE);
+        binding.progressBar.setVisibility(inProgress ? View.VISIBLE : View.GONE);
     }
 
     // ── Hide flow ──────────────────────────────────────────────────────
@@ -292,19 +305,25 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // Step 1: Check PIN
+        // Step 1: Check ADB/Telnet connection — fail fast, before showing any other dialogs
+        if (!ShellExecutor.getInstance(this).hasWorkingTransport()) {
+            Toast.makeText(this, R.string.no_connection_detected, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // Step 2: Check PIN
         if (!pinStorage.hasPin()) {
             pinDialogs.showRequired();
             return;
         }
 
-        // Step 2: Check permissions
+        // Step 3: Check permissions
         if (!permissionGate.hasAll()) {
             permissionGate.showRequiredToHide();
             return;
         }
 
-        // Step 3: Check selection
+        // Step 4: Check selection
         List<AppInfo> checkedApps = adapter.getCheckedApps();
         if (checkedApps.isEmpty()) {
             Toast.makeText(this, R.string.no_apps_selected, Toast.LENGTH_SHORT).show();
@@ -372,6 +391,10 @@ public class MainActivity extends AppCompatActivity {
         if (adbOperationInProgress) return;
         if (adapter == null) {
             Toast.makeText(this, R.string.list_loading, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (!ShellExecutor.getInstance(this).hasWorkingTransport()) {
+            Toast.makeText(this, R.string.no_connection_detected, Toast.LENGTH_LONG).show();
             return;
         }
 

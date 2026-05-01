@@ -13,6 +13,7 @@
     <string name="apps_restore_error">Ошибка восстановления приложения: %s</string>
     <string name="no_apps_selected">Приложения не выбраны</string>
     <string name="list_loading">Загрузка списка приложений…</string>
+    <string name="no_connection_detected">ADB или Telnet недоступны. Скрыть или восстановить приложения нельзя.</string>
     <string name="hide_apps">Скрыть выбранные приложения</string>
     <string name="restore_apps">Восстановить выбранные приложения</string>
 

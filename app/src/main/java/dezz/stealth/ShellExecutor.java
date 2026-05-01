@@ -85,6 +85,11 @@ public class ShellExecutor {
         return instance;
     }
 
+    /** True after a working transport has been discovered by {@link #checkConnection}. */
+    public boolean hasWorkingTransport() {
+        return activeFactory != null;
+    }
+
     // ── Connection check ──────────────────────────────────────────────
 
     public void checkConnection(StatusCallback callback) {
