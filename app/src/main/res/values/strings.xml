@@ -56,7 +56,10 @@
     <string name="connection_attempt_success">connected</string>
     <string name="connection_attempt_active">in use</string>
     <string name="connection_attempt_also_works">also works</string>
-    <string name="connection_details_in_progress">…still probing more endpoints</string>
+    <string name="connection_details_in_progress">…discovery still in progress</string>
+    <string name="connection_scanning_marker">(scanning…)</string>
+    <string name="connection_host_searching">scanning ports…</string>
+    <string name="connection_host_no_match">no supported services found</string>
     <string name="connection_error_refused">Connection refused</string>
     <string name="connection_error_unreachable">Host unreachable</string>
     <string name="connection_error_timeout">Connection timeout</string>

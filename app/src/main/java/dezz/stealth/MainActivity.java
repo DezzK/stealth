@@ -66,8 +66,8 @@ public class MainActivity extends AppCompatActivity {
     /** Incremented on every mode switch — used to discard stale list-build results. */
     private int listGeneration = 0;
 
-    /** Latest snapshot of probe attempts — refreshed live as probes complete. */
-    private List<ShellExecutor.ConnectionAttempt> lastConnectionAttempts = null;
+    /** Latest snapshot of host scans — refreshed live as the discovery progresses. */
+    private List<ShellExecutor.HostScanResult> lastHostScans = null;
     private boolean connectionProbingFinished = false;
 
     /** Live reference to the connection-details dialog body when open, null otherwise. */
@@ -157,7 +157,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showConnectionDetailsIfAny() {
-        if (lastConnectionAttempts == null || lastConnectionAttempts.isEmpty()) return;
+        if (lastHostScans == null || lastHostScans.isEmpty()) return;
 
         // Custom view so we can keep a reference to the body TextView and refresh it
         // live as more probes complete in the background.
@@ -181,65 +181,71 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
-    /** Renders the dialog body from {@link #lastConnectionAttempts}. No-op if dialog is closed. */
+    /** Renders the dialog body from {@link #lastHostScans}. No-op if dialog is closed. */
     private void renderConnectionDetailsBody() {
         TextView target = connectionDetailsBody;
-        if (target == null || lastConnectionAttempts == null) return;
+        if (target == null || lastHostScans == null) return;
 
-        boolean anySuccess = findActive(lastConnectionAttempts) != null;
+        boolean anySuccess = findActiveHostPort(lastHostScans) != null;
 
         StringBuilder body = new StringBuilder();
         body.append(getString(anySuccess
                 ? R.string.connection_details_intro_success
                 : R.string.connection_details_intro));
         body.append("\n");
-        for (ShellExecutor.ConnectionAttempt a : lastConnectionAttempts) {
-            body.append("\n• ").append(a.label).append(" — ");
-            if (a.isActive) {
-                body.append(getString(R.string.connection_attempt_active));
-            } else if (a.isSuccess()) {
-                body.append(getString(R.string.connection_attempt_also_works));
+        for (ShellExecutor.HostScanResult host : lastHostScans) {
+            List<ShellExecutor.PortResult> supported = new ArrayList<>();
+            for (ShellExecutor.PortResult p : host.ports) {
+                if (p.hasSupportedTransport()) supported.add(p);
+            }
+
+            // Status emoji: ✅ found something, ❌ done & nothing, ⏳ still scanning with nothing yet
+            String prefix;
+            if (!supported.isEmpty()) {
+                prefix = "✅ ";
+            } else if (host.scanning) {
+                prefix = "⏳ ";
             } else {
-                body.append(simplifyConnectionError(a.rawError));
+                prefix = "❌ ";
+            }
+
+            body.append("\n").append(prefix).append(host.host);
+            if (host.scanning) {
+                body.append(" ").append(getString(R.string.connection_scanning_marker));
+            }
+            body.append("\n");
+
+            if (supported.isEmpty()) {
+                body.append("    ").append(getString(host.scanning
+                        ? R.string.connection_host_searching
+                        : R.string.connection_host_no_match)).append("\n");
+            } else {
+                for (ShellExecutor.PortResult p : supported) {
+                    body.append("    • ").append(p.transport)
+                            .append(" :").append(p.port);
+                    if (p.isActive) {
+                        body.append(" — ").append(getString(R.string.connection_attempt_active));
+                    } else {
+                        body.append(" — ").append(getString(R.string.connection_attempt_also_works));
+                    }
+                    body.append("\n");
+                }
             }
         }
         if (!connectionProbingFinished) {
-            body.append("\n\n").append(getString(R.string.connection_details_in_progress));
+            body.append("\n").append(getString(R.string.connection_details_in_progress));
         }
-        target.setText(body.toString());
-    }
-
-    /**
-     * Translate a raw exception/probe message to a short, localized phrase.
-     * Falls back to the trimmed raw message if no known pattern matches.
-     */
-    private String simplifyConnectionError(String raw) {
-        if (raw == null || raw.isEmpty()) return getString(R.string.connection_error_unknown);
-        String m = raw.toLowerCase(java.util.Locale.ROOT);
-        if (m.contains("econnrefused") || m.contains("connection refused")) {
-            return getString(R.string.connection_error_refused);
-        }
-        if (m.contains("timeout") || m.contains("timed out")) {
-            return getString(R.string.connection_error_timeout);
-        }
-        if (m.contains("unable to resolve") || m.contains("unknown host")
-                || m.contains("nodename") || m.contains("unreachable")) {
-            return getString(R.string.connection_error_unreachable);
-        }
-        if (m.contains("pm not available")) {
-            return getString(R.string.connection_error_pm_unavailable);
-        }
-        return raw.length() > 80 ? raw.substring(0, 80) + "…" : raw;
+        target.setText(body.toString().trim());
     }
 
     private void checkAdbStatus() {
         binding.connectionStatusText.setText(R.string.connection_checking);
         binding.connectionStatusText.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
-        lastConnectionAttempts = null;
+        lastHostScans = null;
         connectionProbingFinished = false;
 
-        ShellExecutor.getInstance(this).checkConnection((attempts, finished) -> postIfAlive(() -> {
-            lastConnectionAttempts = attempts;
+        ShellExecutor.getInstance(this).checkConnection((hosts, finished) -> postIfAlive(() -> {
+            lastHostScans = hosts;
             connectionProbingFinished = finished;
             updateConnectionStatusText();
             renderConnectionDetailsBody();
@@ -247,9 +253,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateConnectionStatusText() {
-        ShellExecutor.ConnectionAttempt active = findActive(lastConnectionAttempts);
+        ActiveEndpoint active = findActiveHostPort(lastHostScans);
         if (active != null) {
-            binding.connectionStatusText.setText(getString(R.string.connection_connected, active.label));
+            String label = active.transport + " " + active.host + ":" + active.port;
+            binding.connectionStatusText.setText(getString(R.string.connection_connected, label));
             binding.connectionStatusText.setTextColor(ContextCompat.getColor(this, R.color.adb_ok));
         } else if (connectionProbingFinished) {
             binding.connectionStatusText.setText(R.string.connection_error);
@@ -260,11 +267,24 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /** Find the transport actually in use for batch operations (the CAS-winner). */
-    private static ShellExecutor.ConnectionAttempt findActive(List<ShellExecutor.ConnectionAttempt> attempts) {
-        if (attempts == null) return null;
-        for (ShellExecutor.ConnectionAttempt a : attempts) {
-            if (a.isActive) return a;
+    /** Active endpoint snapshot (host + port + transport) used in the status line. */
+    private static class ActiveEndpoint {
+        final String host;
+        final int port;
+        final String transport;
+        ActiveEndpoint(String host, int port, String transport) {
+            this.host = host; this.port = port; this.transport = transport;
+        }
+    }
+
+    private static ActiveEndpoint findActiveHostPort(List<ShellExecutor.HostScanResult> hosts) {
+        if (hosts == null) return null;
+        for (ShellExecutor.HostScanResult h : hosts) {
+            for (ShellExecutor.PortResult p : h.ports) {
+                if (p.isActive && p.hasSupportedTransport()) {
+                    return new ActiveEndpoint(h.host, p.port, p.transport);
+                }
+            }
         }
         return null;
     }
