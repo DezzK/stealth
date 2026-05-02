@@ -8,7 +8,6 @@
     <string name="restore_mode_header">Check the apps you want to restore</string>
     <string name="no_hidden_apps">No hidden apps to restore</string>
 
-    <string name="copyright_notice" translatable="false">© 2025-2026 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
     <string name="apps_hidden_successfully">Apps hidden successfully</string>
     <string name="apps_hide_error">Apps hide error: %s</string>
     <string name="apps_restored_successfully">Apps restored successfully</string>

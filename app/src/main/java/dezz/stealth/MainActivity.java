@@ -139,8 +139,6 @@ public class MainActivity extends AppCompatActivity {
         if (appVersion != null) {
             binding.headerText.setText(String.format("%s %s", getString(R.string.app_name), appVersion));
         }
-        binding.copyrightNoticeText.setMovementMethod(LinkMovementMethod.getInstance());
-
         binding.recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         binding.hideAppsButton.setOnClickListener(v -> disableApps());

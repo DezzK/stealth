@@ -255,18 +255,4 @@
             android:layout_gravity="center"
             android:visibility="gone" />
     </FrameLayout>
-
-    <!-- Copyright notice -->
-    <TextView
-        android:id="@+id/copyrightNoticeText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:background="@color/card_background"
-        android:gravity="center"
-        android:linksClickable="true"
-        android:padding="8sp"
-        android:text="@string/copyright_notice"
-        android:textColor="@color/text_secondary"
-        android:textSize="12sp" />
 </LinearLayout>
