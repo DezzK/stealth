@@ -40,6 +40,17 @@
 
     <string name="empty_hide_list">No user apps to hide</string>
     <string name="settings_description">Settings</string>
+    <string name="menu_about">About</string>
+    <string name="about_url" translatable="false">https://dezzk.github.io/stealth/</string>
+    <string name="about_fallback"><![CDATA[
+        <p><b>Stealth Mode</b><br>
+        Hide user-installed apps on Android car head units before service visits.</p>
+        <p><b>Author</b><br>
+        Dezz — Telegram <a href="https://t.me/DezzK">@DezzK</a></p>
+        <p><b>Source code</b><br>
+        <a href="https://github.com/DezzK/stealth">github.com/DezzK/stealth</a></p>
+        <p><i>The full About page is available online at <a href="https://dezzk.github.io/stealth/">dezzk.github.io/stealth</a> when an internet connection is available.</i></p>
+    ]]></string>
     <string name="connection_details_title">Connection details</string>
     <string name="connection_details_intro">Could not reach the head unit on any expected service.</string>
     <string name="connection_details_intro_success">Probed the following services:</string>

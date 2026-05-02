@@ -18,6 +18,7 @@
 package dezz.stealth;
 
 import android.content.ComponentName;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -145,6 +146,7 @@ public class MainActivity extends AppCompatActivity {
         binding.hideAppsButton.setOnClickListener(v -> disableApps());
         binding.restoreAppsButton.setOnClickListener(v -> restoreSelectedApps());
         binding.settingsButton.setOnClickListener(v -> pinDialogs.showSetOrChange());
+        binding.aboutButton.setOnClickListener(v -> startActivity(new Intent(this, AboutActivity.class)));
         binding.pinHintRow.setOnClickListener(v -> pinDialogs.showSetOrChange());
         binding.connectionStatusText.setOnClickListener(v -> showConnectionDetailsIfAny());
 

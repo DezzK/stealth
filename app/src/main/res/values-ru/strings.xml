@@ -38,6 +38,16 @@
 
     <string name="empty_hide_list">Нет пользовательских приложений для скрытия</string>
     <string name="settings_description">Настройки</string>
+    <string name="menu_about">О приложении</string>
+    <string name="about_fallback"><![CDATA[
+        <p><b>Сервисный режим</b><br>
+        Скрывает пользовательские приложения на головных устройствах Android перед визитом в сервис.</p>
+        <p><b>Автор</b><br>
+        Dezz — Telegram <a href="https://t.me/DezzK">@DezzK</a></p>
+        <p><b>Исходный код</b><br>
+        <a href="https://github.com/DezzK/stealth">github.com/DezzK/stealth</a></p>
+        <p><i>Полная страница «О приложении» доступна онлайн по адресу <a href="https://dezzk.github.io/stealth/">dezzk.github.io/stealth</a> при наличии подключения к интернету.</i></p>
+    ]]></string>
     <string name="connection_details_title">Детали подключения</string>
     <string name="connection_details_intro">Ни одна из ожидаемых служб на головном устройстве не доступна.</string>
     <string name="connection_details_intro_success">Опрошены следующие службы:</string>
