@@ -58,7 +58,7 @@ public class TelnetTransport implements ShellTransport {
 
     @Override
     public String describe() {
-        return "telnet " + host + ":" + port;
+        return "telnet " + ShellExecutor.formatHostPort(host, port);
     }
 
     @Override
