@@ -9,7 +9,7 @@
     <string name="no_hidden_apps">Нет скрытых приложений для восстановления</string>
     <string name="apps_hidden_successfully">Приложения успешно скрыты</string>
     <string name="apps_hide_error">Ошибка скрытия приложения: %s</string>
-    <string name="apps_restored_successfully">Приложения успешно восстановлены</string>
+    <string name="apps_restored_successfully">Приложения успешно восстановлены. Перезагрузите головное устройство, чтобы все фоновые сервисы запустились корректно.</string>
     <string name="apps_restore_error">Ошибка восстановления приложения: %s</string>
     <string name="no_apps_selected">Приложения не выбраны</string>
     <string name="list_loading">Загрузка списка приложений…</string>
@@ -34,7 +34,7 @@
     <string name="hide_confirm_message">Следующие приложения будут скрыты:\n\n%s\n\nПродолжить?</string>
 
     <string name="apps_hide_partial">%1$d приложений скрыто, %2$d не удалось</string>
-    <string name="apps_restore_partial">%1$d приложений восстановлено, %2$d не удалось</string>
+    <string name="apps_restore_partial">%1$d приложений восстановлено, %2$d не удалось. Перезагрузите головное устройство, чтобы все фоновые сервисы запустились корректно.</string>
 
     <string name="empty_hide_list">Нет пользовательских приложений для скрытия</string>
     <string name="settings_description">Настройки</string>
@@ -58,6 +58,9 @@
     <string name="connection_scanning_marker">(сканируется…)</string>
     <string name="connection_host_searching">сканирование портов…</string>
     <string name="connection_host_no_match">подходящих служб не найдено</string>
+    <string name="connection_host_no_open_ports">открытые порты не найдены</string>
+    <string name="connection_port_probing">проверка протоколов…</string>
+    <string name="connection_port_no_protocol">открыт, известный протокол не отвечает</string>
     <string name="connection_error_refused">Соединение отклонено</string>
     <string name="connection_error_unreachable">Хост недоступен</string>
     <string name="connection_error_timeout">Таймаут подключения</string>

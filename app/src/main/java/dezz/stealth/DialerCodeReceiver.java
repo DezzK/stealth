@@ -41,7 +41,10 @@ public class DialerCodeReceiver extends BroadcastReceiver {
 
     private void showLauncherIcon(Context context) {
         PackageManager p = context.getPackageManager();
-        ComponentName componentName = new ComponentName(context, MainActivity.class);
+        // Toggle the trampoline, not MainActivity. Toggling MainActivity directly makes
+        // the system restart/kill the freshly-launched activity right after the user
+        // opens it from the dialer code — see MainActivity.hideLauncherIcon.
+        ComponentName componentName = new ComponentName(context, LauncherTrampolineActivity.class);
         p.setComponentEnabledSetting(componentName, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
     }
 

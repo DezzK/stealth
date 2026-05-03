@@ -87,6 +87,7 @@ public class MainActivity extends AppCompatActivity {
         binding = ActivityMainBinding.inflate(this.getLayoutInflater());
         setContentView(binding.getRoot());
 
+        ensureMainActivityEnabled();
         initializeViews();
         permissionGate.requestMissing();
     }
@@ -194,14 +195,14 @@ public class MainActivity extends AppCompatActivity {
                 : R.string.connection_details_intro));
         body.append("\n");
         for (ShellExecutor.HostScanResult host : lastHostScans) {
-            List<ShellExecutor.PortResult> supported = new ArrayList<>();
+            boolean hasMatch = false;
             for (ShellExecutor.PortResult p : host.ports) {
-                if (p.hasSupportedTransport()) supported.add(p);
+                if (p.hasSupportedTransport()) { hasMatch = true; break; }
             }
 
-            // Status emoji: ✅ found something, ❌ done & nothing, ⏳ still scanning with nothing yet
+            // Status emoji: ✅ found something, ❌ done & nothing, ⏳ still scanning
             String prefix;
-            if (!supported.isEmpty()) {
+            if (hasMatch) {
                 prefix = "✅ ";
             } else if (host.scanning) {
                 prefix = "⏳ ";
@@ -215,20 +216,13 @@ public class MainActivity extends AppCompatActivity {
             }
             body.append("\n");
 
-            if (supported.isEmpty()) {
+            if (host.ports.isEmpty()) {
                 body.append("    ").append(getString(host.scanning
                         ? R.string.connection_host_searching
-                        : R.string.connection_host_no_match)).append("\n");
+                        : R.string.connection_host_no_open_ports)).append("\n");
             } else {
-                for (ShellExecutor.PortResult p : supported) {
-                    body.append("    • ").append(p.transport)
-                            .append(" :").append(p.port);
-                    if (p.isActive) {
-                        body.append(" — ").append(getString(R.string.connection_attempt_active));
-                    } else {
-                        body.append(" — ").append(getString(R.string.connection_attempt_also_works));
-                    }
-                    body.append("\n");
+                for (ShellExecutor.PortResult p : host.ports) {
+                    appendPortBlock(body, p);
                 }
             }
         }
@@ -255,7 +249,7 @@ public class MainActivity extends AppCompatActivity {
     private void updateConnectionStatusText() {
         ActiveEndpoint active = findActiveHostPort(lastHostScans);
         if (active != null) {
-            String label = active.transport + " " + active.host + ":" + active.port;
+            String label = active.transport + " " + ShellExecutor.formatHostPort(active.host, active.port);
             binding.connectionStatusText.setText(getString(R.string.connection_connected, label));
             binding.connectionStatusText.setTextColor(ContextCompat.getColor(this, R.color.adb_ok));
         } else if (connectionProbingFinished) {
@@ -281,12 +275,33 @@ public class MainActivity extends AppCompatActivity {
         if (hosts == null) return null;
         for (ShellExecutor.HostScanResult h : hosts) {
             for (ShellExecutor.PortResult p : h.ports) {
-                if (p.isActive && p.hasSupportedTransport()) {
-                    return new ActiveEndpoint(h.host, p.port, p.transport);
+                String transport = p.successfulTransport();
+                if (p.isActive && transport != null) {
+                    return new ActiveEndpoint(h.host, p.port, transport);
                 }
             }
         }
         return null;
+    }
+
+    /** Renders one port — checkmark + port number + protocol if found, cross otherwise. */
+    private void appendPortBlock(StringBuilder body, ShellExecutor.PortResult p) {
+        if (p.probes.isEmpty()) {
+            // Still probing — neutral marker.
+            body.append("    … :").append(p.port).append(" — ")
+                    .append(getString(R.string.connection_port_probing)).append("\n");
+            return;
+        }
+        String successful = p.successfulTransport();
+        if (successful != null) {
+            body.append("    ✓ :").append(p.port).append(" — ").append(successful);
+            if (p.isActive) {
+                body.append(" (").append(getString(R.string.connection_attempt_active)).append(")");
+            }
+        } else {
+            body.append("    ✗ :").append(p.port);
+        }
+        body.append("\n");
     }
 
     // ── Mode switching ────────────────────────────────────────────────
@@ -401,8 +416,28 @@ public class MainActivity extends AppCompatActivity {
 
     private void hideLauncherIcon() {
         PackageManager p = getPackageManager();
-        ComponentName componentName = new ComponentName(this, MainActivity.class);
-        p.setComponentEnabledSetting(componentName, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+        // Toggle the trampoline, not MainActivity. Disabling MainActivity directly makes
+        // the system restart/kill the running activity even with DONT_KILL_APP — so when
+        // DialerCodeReceiver re-enables it, the activity dies right after the user opens
+        // it (no Java exception, just looks like the app silently exits).
+        ComponentName launcher = new ComponentName(this, LauncherTrampolineActivity.class);
+        p.setComponentEnabledSetting(launcher, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+    }
+
+    /**
+     * Migration safety net: re-enable MainActivity in case an older build had disabled
+     * it directly. New code never disables MainActivity (only the alias), so on legacy
+     * installs we may inherit a DISABLED state that prevents the activity from launching.
+     */
+    private void ensureMainActivityEnabled() {
+        try {
+            PackageManager p = getPackageManager();
+            ComponentName cn = new ComponentName(this, MainActivity.class);
+            int state = p.getComponentEnabledSetting(cn);
+            if (state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
+                p.setComponentEnabledSetting(cn, PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, PackageManager.DONT_KILL_APP);
+            }
+        } catch (Exception ignored) {}
     }
 
     // ── ADB operation lifecycle ───────────────────────────────────────
@@ -490,8 +525,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onResult(ShellExecutor.BatchResult result) {
                 postIfAlive(() -> {
-                    setAdbOperationInProgress(false);
-
                     // Save successfully hidden apps to storage (even if some failed)
                     if (result.hasAnySuccess()) {
                         Map<String, String> succeeded = new HashMap<>();
@@ -499,12 +532,23 @@ public class MainActivity extends AppCompatActivity {
                             succeeded.put(pkg, packagesToDisable.get(pkg));
                         }
                         appsToHideStorage.save(succeeded);
-                        hideLauncherIcon();
                     }
 
                     showBatchResultToast(result, R.string.apps_hidden_successfully,
                             R.string.apps_hide_partial, R.string.apps_hide_error);
-                    updateTabAppearance();
+
+                    if (result.hasAnySuccess()) {
+                        // Spinner stays visible until the activity is gone — the user
+                        // is done here. Hide the launcher icon, then close the activity
+                        // ourselves so there's no awkward "app still usable for a few
+                        // seconds before vanishing" window.
+                        hideLauncherIcon();
+                        finish();
+                    } else {
+                        // Nothing succeeded — let the user try again
+                        setAdbOperationInProgress(false);
+                        updateTabAppearance();
+                    }
                 });
             }
 
@@ -583,7 +627,10 @@ public class MainActivity extends AppCompatActivity {
     private void showBatchResultToast(ShellExecutor.BatchResult result,
                                       int fullSuccessRes, int partialRes, int errorRes) {
         if (result.isFullSuccess()) {
-            Toast.makeText(this, fullSuccessRes, Toast.LENGTH_SHORT).show();
+            // LENGTH_LONG so the restore "reboot recommended" hint stays on screen long
+            // enough to read. Hide success message is short but a slightly longer toast
+            // there is harmless (and the activity finishes right after anyway).
+            Toast.makeText(this, fullSuccessRes, Toast.LENGTH_LONG).show();
         } else if (result.hasAnySuccess()) {
             Toast.makeText(this,
                     getString(partialRes,

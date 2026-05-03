@@ -10,7 +10,7 @@
 
     <string name="apps_hidden_successfully">Apps hidden successfully</string>
     <string name="apps_hide_error">Apps hide error: %s</string>
-    <string name="apps_restored_successfully">Apps restored successfully</string>
+    <string name="apps_restored_successfully">Apps restored successfully. Reboot the head unit so all background services start cleanly.</string>
     <string name="apps_restore_error">Apps restore error: %s</string>
     <string name="no_apps_selected">No apps selected</string>
     <string name="list_loading">Loading apps list…</string>
@@ -35,7 +35,7 @@
     <string name="hide_confirm_message">The following apps will be hidden:\n\n%s\n\nProceed?</string>
 
     <string name="apps_hide_partial">%1$d apps hidden, %2$d failed</string>
-    <string name="apps_restore_partial">%1$d apps restored, %2$d failed</string>
+    <string name="apps_restore_partial">%1$d apps restored, %2$d failed. Reboot the head unit so all background services start cleanly.</string>
 
     <string name="empty_hide_list">No user apps to hide</string>
     <string name="settings_description">Settings</string>
@@ -60,6 +60,9 @@
     <string name="connection_scanning_marker">(scanning…)</string>
     <string name="connection_host_searching">scanning ports…</string>
     <string name="connection_host_no_match">no supported services found</string>
+    <string name="connection_host_no_open_ports">no open ports found</string>
+    <string name="connection_port_probing">probing protocols…</string>
+    <string name="connection_port_no_protocol">open, no supported protocol</string>
     <string name="connection_error_refused">Connection refused</string>
     <string name="connection_error_unreachable">Host unreachable</string>
     <string name="connection_error_timeout">Connection timeout</string>
