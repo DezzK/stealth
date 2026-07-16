@@ -79,4 +79,10 @@
     <string name="connection_checking">Подключение: проверка…</string>
     <string name="connection_connected">Подключено через %s</string>
     <string name="connection_error">Нет подключения — нажмите для деталей</string>
+
+    <string name="keepalive_channel_name">Фоновая служба</string>
+    <string name="battery_opt_title">Повысить надёжность</string>
+    <string name="battery_opt_message">Через несколько дней головное устройство может выгрузить приложение из памяти, и тогда набор PIN не откроет его. Если разрешить приложению игнорировать оптимизацию батареи, это станет гораздо менее вероятным.\n\nОткрыть системный диалог, чтобы разрешить?</string>
+    <string name="battery_opt_grant">Разрешить</string>
+    <string name="later">Позже</string>
 </resources>

@@ -81,4 +81,10 @@
     <string name="connection_checking">Connection: checking…</string>
     <string name="connection_connected">Connected via %s</string>
     <string name="connection_error">Not connected — tap for details</string>
+
+    <string name="keepalive_channel_name">Background service</string>
+    <string name="battery_opt_title">Improve reliability</string>
+    <string name="battery_opt_message">After a few days the head unit may unload the app from memory, and then dialing the PIN won\'t reveal it. Letting the app ignore battery optimization makes this much less likely.\n\nOpen the system dialog to allow it?</string>
+    <string name="battery_opt_grant">Allow</string>
+    <string name="later">Later</string>
 </resources>

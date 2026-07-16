@@ -63,6 +63,9 @@ public class MainActivity extends AppCompatActivity {
     private boolean isRestoreMode = false;
     private boolean adbOperationInProgress = false;
 
+    /** Whether the battery-optimization nudge was already shown this session. */
+    private boolean batteryPromptShown = false;
+
     /** Incremented on every mode switch — used to discard stale list-build results. */
     private int listGeneration = 0;
 
@@ -119,8 +122,14 @@ public class MainActivity extends AppCompatActivity {
             }
             postIfAlive(() -> {
                 if (appsToHideStorage.hasHiddenApps()) {
+                    // Opened while hidden (e.g. relaunched after a kill) — re-arm the
+                    // keep-alive service so it survives the next idle period.
+                    KeepAliveService.start(getApplicationContext());
                     switchToRestoreMode();
                 } else {
+                    // Nothing hidden (possibly restored externally, e.g. via adb) — make
+                    // sure the keep-alive service isn't left running for nothing.
+                    KeepAliveService.stop(getApplicationContext());
                     switchToHideMode();
                 }
             });
@@ -500,6 +509,20 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        // Step 5: Nudge the user to whitelist us from battery optimization so the keep-alive
+        // service survives longer between openings. Best-effort and non-blocking — shown at
+        // most once per session; on "Later" we just fall through and hide anyway.
+        if (!batteryPromptShown && !BatteryOptimization.isIgnoring(this)) {
+            batteryPromptShown = true;
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.battery_opt_title)
+                    .setMessage(R.string.battery_opt_message)
+                    .setPositiveButton(R.string.battery_opt_grant, (dialog, which) -> BatteryOptimization.request(this))
+                    .setNegativeButton(R.string.later, (dialog, which) -> disableApps())
+                    .show();
+            return;
+        }
+
         Map<String, String> packagesToDisable = new HashMap<>();
         StringBuilder appNames = new StringBuilder();
         for (AppInfo app : checkedApps) {
@@ -543,6 +566,9 @@ public class MainActivity extends AppCompatActivity {
                         // ourselves so there's no awkward "app still usable for a few
                         // seconds before vanishing" window.
                         hideLauncherIcon();
+                        // Start the keep-alive service so the OEM is less likely to
+                        // force-stop us and kill the dialer-PIN reveal path.
+                        KeepAliveService.start(getApplicationContext());
                         finish();
                     } else {
                         // Nothing succeeded — let the user try again
@@ -607,6 +633,8 @@ public class MainActivity extends AppCompatActivity {
                     if (appsToHideStorage.hasHiddenApps()) {
                         switchToRestoreMode();
                     } else {
+                        // Nothing hidden any more — no need to keep the process pinned.
+                        KeepAliveService.stop(getApplicationContext());
                         switchToHideMode();
                     }
                 });

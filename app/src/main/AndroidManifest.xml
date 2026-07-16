@@ -22,6 +22,17 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <!--
+        Keep-alive foreground service + reboot restart: while apps are hidden there is no
+        launcher icon, so if the OEM force-stops the process the manifest DialerCodeReceiver
+        stops getting NEW_OUTGOING_CALL (stopped packages are excluded from broadcasts) and
+        the PIN reveal dies with no recovery. A foreground service keeps the process alive;
+        the battery-optimization exemption reduces how often the ROM reaps it. Best-effort
+        on aggressive head-unit ROMs — see KeepAliveService / BatteryOptimization.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="false"
@@ -71,6 +82,28 @@
             tools:ignore="ExportedReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.NEW_OUTGOING_CALL" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+            Keeps the process out of the stopped state while apps are hidden, so the
+            dialer-PIN receiver keeps receiving broadcasts. directBootAware so BootReceiver
+            can restart it before unlock, matching the app's Direct Boot storage design.
+        -->
+        <service
+            android:name=".KeepAliveService"
+            android:enabled="true"
+            android:exported="false"
+            android:directBootAware="true" />
+
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="true"
+            android:directBootAware="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
     </application>
