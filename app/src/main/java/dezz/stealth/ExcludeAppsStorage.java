@@ -20,11 +20,11 @@ public class ExcludeAppsStorage {
 
     public void add(String packageName) {
         // The boolean value is a placeholder — only the key is read back via getAppsToKeep()
-        prefs.edit().putBoolean(packageName, true).commit();
+        prefs.edit().putBoolean(packageName, true).apply();
     }
 
     public void remove(String packageName) {
-        prefs.edit().remove(packageName).commit();
+        prefs.edit().remove(packageName).apply();
     }
 
     public Set<String> getAppsToKeep() {

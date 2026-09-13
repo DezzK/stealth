@@ -17,6 +17,11 @@
   -->
 
 <resources>
+    <!-- Main theme. The window background is painted here so layouts don't repaint it (overdraw). -->
+    <style name="Theme.Stealth" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/background</item>
+    </style>
+
     <!-- About screen needs a Material theme so MaterialToolbar/AppBarLayout render correctly. -->
     <style name="Theme.Stealth.About" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/accent</item>

@@ -35,7 +35,7 @@ public class PinStorage {
         if (validate(pin) != OK) {
             return false;
         }
-        prefs.edit().putString(KEY_PIN_HASH, hash(pin)).commit();
+        prefs.edit().putString(KEY_PIN_HASH, hash(pin)).apply();
         return true;
     }
 

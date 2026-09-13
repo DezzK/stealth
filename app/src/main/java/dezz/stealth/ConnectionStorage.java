@@ -86,11 +86,11 @@ public class ConnectionStorage {
         for (Endpoint e : endpoints) {
             raw.add(encode(e));
         }
-        prefs.edit().putStringSet(KEY_ENDPOINTS, raw).commit();
+        prefs.edit().putStringSet(KEY_ENDPOINTS, raw).apply();
     }
 
     public void clear() {
-        prefs.edit().clear().commit();
+        prefs.edit().clear().apply();
     }
 
     private static String encode(Endpoint e) {
