@@ -100,6 +100,16 @@
         }
         .donate .hint { color: var(--muted); font-size: 14px; }
 
+        code {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            font-size: 14px;
+            word-break: break-all;
+        }
+
         footer {
             margin-top: 8px;
             text-align: center;
@@ -123,6 +133,16 @@
                 <a href="https://t.me/DezzK" target="_blank" rel="noopener">Telegram: @DezzK</a>
             </li>
         </ul>
+    </section>
+
+    <section class="card full-width">
+        <h2>Если приложение не появляется после набора PIN</h2>
+        <p>Возврат по PIN опирается на то, что штатная звонилка ГУ сообщает приложениям об исходящих вызовах. Некоторые вендорские звонилки этого не делают, а проверить это можно только после скрытия.</p>
+        <p>Аварийный путь: подключите компьютер с ADB и выполните</p>
+        <p><code>adb shell am start -n dezz.stealth/.MainActivity</code></p>
+        <p>Чтобы вернуть иконку в лаунчер без открытия приложения:</p>
+        <p><code>adb shell pm enable dezz.stealth/.LauncherTrampolineActivity</code></p>
+        <p>Пока приложения скрыты, в шторке остаётся тихое уведомление «Синхронизация» — оно удерживает процесс в памяти, чтобы разблокировка по PIN продолжала работать. Оформлено нейтрально, чтобы не выдавать это приложение. Строка «отправитель» в уведомлении берётся из названия приложения и системным API не меняется.</p>
     </section>
 
     <section class="card">

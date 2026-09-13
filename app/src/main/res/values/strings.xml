@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Stealth Mode</string>
-    <string name="notification_content">Stealth Mode service is running</string>
     <string name="tab_hide">Hide</string>
     <string name="tab_restore">Restore</string>
     <string name="hide_mode_header">Check the apps you want to hide</string>
     <string name="restore_mode_header">Check the apps you want to restore</string>
-    <string name="no_hidden_apps">No hidden apps to restore</string>
 
     <string name="apps_hidden_successfully">Apps hidden successfully</string>
     <string name="apps_hide_error">Apps hide error: %s</string>
@@ -18,8 +16,6 @@
     <string name="hide_apps">Hide selected apps</string>
     <string name="restore_apps">Restore selected apps</string>
 
-    <string name="set_pin">Set PIN</string>
-    <string name="change_pin">Change PIN</string>
     <string name="set_pin_title">Set unlock PIN</string>
     <string name="change_pin_title">Change unlock PIN</string>
     <string name="pin_dialog_message">Enter a numeric PIN (minimum 3 digits). To reveal the app after hiding, dial this PIN on the phone dialer.</string>
@@ -28,14 +24,26 @@
     <string name="pin_set_successfully">PIN set successfully</string>
     <string name="pin_too_short">PIN must be at least 3 digits</string>
     <string name="pin_no_leading_zero">PIN must not start with 0 — the dialer rejects such numbers</string>
-    <string name="pin_required">Set a PIN code before hiding apps</string>
     <string name="default_pin_hint">Default PIN: %s (set your own for security)</string>
 
     <string name="hide_confirm_title">Confirm hiding</string>
-    <string name="hide_confirm_message">The following apps will be hidden:\n\n%s\n\nProceed?</string>
+    <string name="hide_confirm_message">The following apps will be hidden:\n\n%s\n\nNote: while apps are hidden, a silent notification labelled "Sync" stays in the notification shade. It keeps the PIN unlock working, cannot be removed, and is worded neutrally so it does not point back at this app.\n\nIf dialing the PIN does not bring the app back, run from a computer:\nadb shell am start -n dezz.stealth/.MainActivity\n\nProceed?</string>
 
-    <string name="apps_hide_partial">%1$d apps hidden, %2$d failed</string>
-    <string name="apps_restore_partial">%1$d apps restored, %2$d failed. Reboot the head unit so all background services start cleanly.</string>
+    <!-- Partial batch results: %1$s and %2$s are the rendered plurals below. -->
+    <string name="apps_hide_partial">%1$s, %2$s</string>
+    <string name="apps_restore_partial">%1$s, %2$s. Reboot the head unit so all background services start cleanly.</string>
+    <plurals name="apps_hidden_count">
+        <item quantity="one">%d app hidden</item>
+        <item quantity="other">%d apps hidden</item>
+    </plurals>
+    <plurals name="apps_restored_count">
+        <item quantity="one">%d app restored</item>
+        <item quantity="other">%d apps restored</item>
+    </plurals>
+    <plurals name="apps_failed_count">
+        <item quantity="one">%d failed</item>
+        <item quantity="other">%d failed</item>
+    </plurals>
 
     <string name="empty_hide_list">No user apps to hide</string>
     <string name="settings_description">Settings</string>
@@ -48,26 +56,23 @@
         Dezz — Telegram <a href="https://t.me/DezzK">@DezzK</a></p>
         <p><b>Source code</b><br>
         <a href="https://github.com/DezzK/stealth">github.com/DezzK/stealth</a></p>
+        <p><b>If the app does not come back after dialing the PIN</b><br>
+        Some head-unit dialers do not report outgoing calls to apps. Connect a computer and run:<br>
+        <tt>adb shell am start -n dezz.stealth/.MainActivity</tt><br>
+        or, to bring the launcher icon back:<br>
+        <tt>adb shell pm enable dezz.stealth/.LauncherTrampolineActivity</tt></p>
         <p><i>The full About page is available online at <a href="https://dezzk.github.io/stealth/">dezzk.github.io/stealth</a> when an internet connection is available.</i></p>
     ]]></string>
     <string name="connection_details_title">Connection details</string>
     <string name="connection_details_intro">Could not reach the head unit on any expected service.</string>
     <string name="connection_details_intro_success">Probed the following services:</string>
-    <string name="connection_attempt_success">connected</string>
     <string name="connection_attempt_active">in use</string>
-    <string name="connection_attempt_also_works">also works</string>
     <string name="connection_details_in_progress">…discovery still in progress</string>
     <string name="connection_scanning_marker">(scanning…)</string>
     <string name="connection_host_searching">scanning ports…</string>
-    <string name="connection_host_no_match">no supported services found</string>
     <string name="connection_host_no_open_ports">no open ports found</string>
+    <string name="connection_host_not_bound">address is not on this device right now — not scanned</string>
     <string name="connection_port_probing">probing protocols…</string>
-    <string name="connection_port_no_protocol">open, no supported protocol</string>
-    <string name="connection_error_refused">Connection refused</string>
-    <string name="connection_error_unreachable">Host unreachable</string>
-    <string name="connection_error_timeout">Connection timeout</string>
-    <string name="connection_error_pm_unavailable">pm command not available</string>
-    <string name="connection_error_unknown">Failed</string>
 
     <string name="pin_required_dialog_message">A PIN code is required before hiding apps. After hiding, the app icon will disappear. To reveal it again, open the dialer, enter your PIN, and press the call button.\n\nSet a numeric PIN (minimum 3 digits):</string>
 
@@ -82,7 +87,13 @@
     <string name="connection_connected">Connected via %s</string>
     <string name="connection_error">Not connected — tap for details</string>
 
-    <string name="keepalive_channel_name">Background service</string>
+    <!--
+        Keep-alive notification is a mandatory shade entry for the foreground service.
+        Worded neutrally, like a generic system service, so it does not reveal this app
+        to whoever is looking at the head unit while apps are hidden.
+    -->
+    <string name="keepalive_channel_name">System services</string>
+    <string name="keepalive_notification_title">Sync</string>
     <string name="battery_opt_title">Improve reliability</string>
     <string name="battery_opt_message">After a few days the head unit may unload the app from memory, and then dialing the PIN won\'t reveal it. Letting the app ignore battery optimization makes this much less likely.\n\nOpen the system dialog to allow it?</string>
     <string name="battery_opt_grant">Allow</string>

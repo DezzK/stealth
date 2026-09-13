@@ -189,11 +189,19 @@ public class ShellExecutor {
         public final String host;
         public final List<PortResult> ports;
         public final boolean scanning;
+        /**
+         * False when the host comes from the connection cache but is not currently bound
+         * to any interface of this device. Such hosts are reported for diagnostics only
+         * and are never probed or scanned — the address may now belong to a foreign
+         * machine on the same network.
+         */
+        public final boolean bound;
 
-        HostScanResult(String host, List<PortResult> ports, boolean scanning) {
+        HostScanResult(String host, List<PortResult> ports, boolean scanning, boolean bound) {
             this.host = host;
             this.ports = ports;
             this.scanning = scanning;
+            this.bound = bound;
         }
     }
 
@@ -222,15 +230,21 @@ public class ShellExecutor {
     /** Mutable per-host state used during a discovery cycle. */
     private static class HostScanState {
         final String host;
+        final boolean bound;
         final Map<Integer, PortResult> ports = new HashMap<>(); // keyed by port
-        volatile boolean scanning = true;
+        volatile boolean scanning;
 
-        HostScanState(String host) { this.host = host; }
+        HostScanState(String host, boolean bound) {
+            this.host = host;
+            this.bound = bound;
+            // Unbound hosts are never scanned, so they are "done" from the start.
+            this.scanning = bound;
+        }
 
         synchronized HostScanResult snapshot() {
             List<PortResult> sorted = new ArrayList<>(ports.values());
             sorted.sort((a, b) -> Integer.compare(a.port, b.port));
-            return new HostScanResult(host, sorted, scanning);
+            return new HostScanResult(host, sorted, scanning, bound);
         }
     }
 
@@ -289,14 +303,16 @@ public class ShellExecutor {
             // Initialize per-host state (all start with scanning=true)
             Map<String, HostScanState> states = new HashMap<>();
             for (String host : hosts) {
-                states.put(host, new HostScanState(host));
+                states.put(host, new HostScanState(host, true));
             }
-            // Hosts the cache mentions but that aren't currently bound: still report them
-            // so the user sees that "the IP we used last time isn't there now".
+            // Hosts the cache mentions but that aren't currently bound to this device are
+            // reported so the user sees "the IP we used last time isn't there now", but
+            // they are NOT probed or scanned: on a shared service-bay Wi-Fi that address
+            // may now belong to someone else's machine, and we must not port-scan it or
+            // push shell commands at it. Only addresses of this very device are touched.
             for (ConnectionStorage.Endpoint e : connectionStorage.loadAll()) {
                 if (!states.containsKey(e.host)) {
-                    states.put(e.host, new HostScanState(e.host));
-                    hosts.add(e.host);
+                    states.put(e.host, new HostScanState(e.host, false));
                 }
             }
 
@@ -317,7 +333,11 @@ public class ShellExecutor {
     // ── Phase 1: cache re-verify ─────────────────────────────────────
 
     private void verifyCachedEndpoints(Map<String, HostScanState> states, StatusCallback callback) {
-        List<ConnectionStorage.Endpoint> cached = connectionStorage.loadAll();
+        List<ConnectionStorage.Endpoint> cached = new ArrayList<>();
+        for (ConnectionStorage.Endpoint e : connectionStorage.loadAll()) {
+            HostScanState state = states.get(e.host);
+            if (state != null && state.bound) cached.add(e);
+        }
         if (cached.isEmpty()) return;
 
         ExecutorService pool = Executors.newFixedThreadPool(
@@ -405,10 +425,13 @@ public class ShellExecutor {
         }
         publish(callback, states, false);
 
-        // 2) Probe each open port for ADB / Telnet. Daemon factory so the workers don't
-        // pin the process if a probe lingers — bounded handshake should already prevent it,
-        // but defensive: stuck workers aren't worth keeping the JVM around for.
+        // 2) Probe each open port for ADB / Telnet. Well-known ADB/Telnet ports go first
+        // so the usual case resolves before we touch unknown vendor daemons. Daemon factory
+        // so the workers don't pin the process if a probe lingers — bounded handshake should
+        // already prevent it, but defensive: stuck workers aren't worth keeping the JVM
+        // around for.
         if (openPorts.isEmpty()) return;
+        openPorts = wellKnownFirst(openPorts);
         ExecutorService pool = Executors.newFixedThreadPool(
                 Math.min(openPorts.size(), PROTOCOL_PROBE_THREADS),
                 daemonThreadFactory("probe-" + host));
@@ -430,6 +453,23 @@ public class ShellExecutor {
         } finally {
             pool.shutdownNow();
         }
+    }
+
+    /**
+     * Ports where ADB / Telnet conventionally live on head units. Probed before any other
+     * open port so the common case never has to poke at unknown vendor services.
+     */
+    private static final int[] WELL_KNOWN_PORTS = {5555, 5556, 5557, 23, 2323};
+
+    private static List<Integer> wellKnownFirst(List<Integer> ports) {
+        List<Integer> ordered = new ArrayList<>(ports.size());
+        for (int known : WELL_KNOWN_PORTS) {
+            if (ports.contains(known)) ordered.add(known);
+        }
+        for (int p : ports) {
+            if (!ordered.contains(p)) ordered.add(p);
+        }
+        return ordered;
     }
 
     /**
@@ -994,6 +1034,32 @@ public class ShellExecutor {
         batchExecutor.execute(() -> runBatch(new ArrayList<>(packageNames), false, callback));
     }
 
+    /**
+     * Android user the app is running as. {@code pm} defaults to user 0, which is wrong on
+     * multi-user head units (AAOS runs the driver as user 10+): disabling for user 0 would
+     * not hide anything the driver sees, and our own enabled-state checks — which run in
+     * the current user — would immediately report the app as "still enabled".
+     */
+    static int currentUserId() {
+        // UserHandle.PER_USER_RANGE; uid = userId * 100000 + appId.
+        return android.os.Process.myUid() / 100000;
+    }
+
+    /**
+     * {@code pm enable} / {@code pm disable-user} print "Package X new state: enabled|disabled"
+     * on success. Anything else (SecurityException, "Unknown package", empty output because
+     * the shell doesn't have pm…) is a failure. Substring heuristics on "error" would
+     * misfire on package names that merely contain the word.
+     */
+    static boolean isPmStateChangeSuccess(String response, boolean disable) {
+        if (response == null) return false;
+        String lower = response.toLowerCase(Locale.ROOT);
+        int idx = lower.indexOf("new state:");
+        if (idx < 0) return false;
+        String state = lower.substring(idx + "new state:".length()).trim();
+        return state.startsWith(disable ? "disabled" : "enabled");
+    }
+
     private void runBatch(List<String> packageNames, boolean disable, BatchCallback callback) {
         // Snapshot the factory once: discovery runs on a separate executor and may
         // null/swap activeFactory while this batch runs. A local copy keeps the operation
@@ -1011,23 +1077,20 @@ public class ShellExecutor {
             Set<String> succeeded = new java.util.LinkedHashSet<>();
             List<String> errors = new ArrayList<>();
 
+            String userArg = " --user " + currentUserId() + " ";
             for (int i = 0; i < packageNames.size(); i++) {
                 String packageName = packageNames.get(i);
-                String command = disable
-                        ? "pm disable-user --user 0 " + packageName
-                        : "pm enable " + packageName;
+                String command = (disable ? "pm disable-user" : "pm enable") + userArg + packageName;
 
                 Log.d(TAG, ">> " + command);
                 try {
                     String responseText = transport.exec(command);
                     Log.d(TAG, "<< " + responseText);
 
-                    String lower = responseText.toLowerCase(Locale.ROOT);
-                    if (lower.contains("exception") || lower.contains("error")
-                            || lower.contains("failure") || lower.contains("unknown package")) {
-                        errors.add(packageName + ": " + responseText);
-                    } else {
+                    if (isPmStateChangeSuccess(responseText, disable)) {
                         succeeded.add(packageName);
+                    } else {
+                        errors.add(packageName + ": " + (responseText.isEmpty() ? "no response" : responseText));
                     }
                 } catch (IOException e) {
                     errors.add(packageName + ": connection lost (" + e.getMessage() + ")");

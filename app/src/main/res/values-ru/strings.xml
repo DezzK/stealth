@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Сервисный режим</string>
-    <string name="notification_content">Служба сервисного режима работает</string>
     <string name="tab_hide">Скрыть</string>
     <string name="tab_restore">Восстановить</string>
     <string name="hide_mode_header">Отметьте приложения для скрытия</string>
     <string name="restore_mode_header">Отметьте приложения для восстановления</string>
-    <string name="no_hidden_apps">Нет скрытых приложений для восстановления</string>
     <string name="apps_hidden_successfully">Приложения успешно скрыты</string>
     <string name="apps_hide_error">Ошибка скрытия приложения: %s</string>
     <string name="apps_restored_successfully">Приложения успешно восстановлены. Перезагрузите головное устройство, чтобы все фоновые сервисы запустились корректно.</string>
@@ -17,8 +15,6 @@
     <string name="hide_apps">Скрыть выбранные приложения</string>
     <string name="restore_apps">Восстановить выбранные приложения</string>
 
-    <string name="set_pin">Задать PIN</string>
-    <string name="change_pin">Изменить PIN</string>
     <string name="set_pin_title">Задать PIN-код разблокировки</string>
     <string name="change_pin_title">Изменить PIN-код разблокировки</string>
     <string name="pin_dialog_message">Введите цифровой PIN-код (минимум 3 цифры). Чтобы открыть приложение после скрытия, наберите этот PIN на телефонной клавиатуре.</string>
@@ -27,14 +23,31 @@
     <string name="pin_set_successfully">PIN-код успешно установлен</string>
     <string name="pin_too_short">PIN-код должен содержать минимум 3 цифры</string>
     <string name="pin_no_leading_zero">PIN-код не должен начинаться с 0 — звонилка отклоняет такие номера</string>
-    <string name="pin_required">Задайте PIN-код перед скрытием приложений</string>
     <string name="default_pin_hint">PIN по умолчанию: %s (рекомендуем задать свой)</string>
 
     <string name="hide_confirm_title">Подтверждение скрытия</string>
-    <string name="hide_confirm_message">Следующие приложения будут скрыты:\n\n%s\n\nПродолжить?</string>
+    <string name="hide_confirm_message">Следующие приложения будут скрыты:\n\n%s\n\nВнимание: пока приложения скрыты, в шторке остаётся тихое уведомление «Синхронизация». Оно поддерживает разблокировку по PIN, убрать его нельзя, и оформлено нейтрально, чтобы не выдавать это приложение.\n\nЕсли набор PIN не вернёт приложение, выполните с компьютера:\nadb shell am start -n dezz.stealth/.MainActivity\n\nПродолжить?</string>
 
-    <string name="apps_hide_partial">%1$d приложений скрыто, %2$d не удалось</string>
-    <string name="apps_restore_partial">%1$d приложений восстановлено, %2$d не удалось. Перезагрузите головное устройство, чтобы все фоновые сервисы запустились корректно.</string>
+    <string name="apps_hide_partial">%1$s, %2$s</string>
+    <string name="apps_restore_partial">%1$s, %2$s. Перезагрузите головное устройство, чтобы все фоновые сервисы запустились корректно.</string>
+    <plurals name="apps_hidden_count">
+        <item quantity="one">%d приложение скрыто</item>
+        <item quantity="few">%d приложения скрыто</item>
+        <item quantity="many">%d приложений скрыто</item>
+        <item quantity="other">%d приложений скрыто</item>
+    </plurals>
+    <plurals name="apps_restored_count">
+        <item quantity="one">%d приложение восстановлено</item>
+        <item quantity="few">%d приложения восстановлено</item>
+        <item quantity="many">%d приложений восстановлено</item>
+        <item quantity="other">%d приложений восстановлено</item>
+    </plurals>
+    <plurals name="apps_failed_count">
+        <item quantity="one">%d не удалось</item>
+        <item quantity="few">%d не удалось</item>
+        <item quantity="many">%d не удалось</item>
+        <item quantity="other">%d не удалось</item>
+    </plurals>
 
     <string name="empty_hide_list">Нет пользовательских приложений для скрытия</string>
     <string name="settings_description">Настройки</string>
@@ -46,26 +59,23 @@
         Dezz — Telegram <a href="https://t.me/DezzK">@DezzK</a></p>
         <p><b>Исходный код</b><br>
         <a href="https://github.com/DezzK/stealth">github.com/DezzK/stealth</a></p>
+        <p><b>Если приложение не появляется после набора PIN</b><br>
+        Некоторые звонилки ГУ не сообщают приложениям об исходящих вызовах. Подключите компьютер и выполните:<br>
+        <tt>adb shell am start -n dezz.stealth/.MainActivity</tt><br>
+        или, чтобы вернуть иконку в лаунчер:<br>
+        <tt>adb shell pm enable dezz.stealth/.LauncherTrampolineActivity</tt></p>
         <p><i>Полная страница «О приложении» доступна онлайн по адресу <a href="https://dezzk.github.io/stealth/">dezzk.github.io/stealth</a> при наличии подключения к интернету.</i></p>
     ]]></string>
     <string name="connection_details_title">Детали подключения</string>
     <string name="connection_details_intro">Ни одна из ожидаемых служб на головном устройстве не доступна.</string>
     <string name="connection_details_intro_success">Опрошены следующие службы:</string>
-    <string name="connection_attempt_success">подключено</string>
     <string name="connection_attempt_active">используется</string>
-    <string name="connection_attempt_also_works">тоже работает</string>
     <string name="connection_details_in_progress">…сканирование продолжается</string>
     <string name="connection_scanning_marker">(сканируется…)</string>
     <string name="connection_host_searching">сканирование портов…</string>
-    <string name="connection_host_no_match">подходящих служб не найдено</string>
     <string name="connection_host_no_open_ports">открытые порты не найдены</string>
+    <string name="connection_host_not_bound">адрес сейчас не принадлежит этому устройству — не сканируется</string>
     <string name="connection_port_probing">проверка протоколов…</string>
-    <string name="connection_port_no_protocol">открыт, известный протокол не отвечает</string>
-    <string name="connection_error_refused">Соединение отклонено</string>
-    <string name="connection_error_unreachable">Хост недоступен</string>
-    <string name="connection_error_timeout">Таймаут подключения</string>
-    <string name="connection_error_pm_unavailable">Команда pm недоступна</string>
-    <string name="connection_error_unknown">Ошибка</string>
 
     <string name="pin_required_dialog_message">Для скрытия приложений необходимо задать PIN-код. После скрытия иконка приложения исчезнет. Чтобы снова её отобразить, откройте штатную звонилку, наберите ваш PIN-код и нажмите кнопку вызова.\n\nЗадайте цифровой PIN-код (минимум 3 цифры):</string>
 
@@ -80,7 +90,8 @@
     <string name="connection_connected">Подключено через %s</string>
     <string name="connection_error">Нет подключения — нажмите для деталей</string>
 
-    <string name="keepalive_channel_name">Фоновая служба</string>
+    <string name="keepalive_channel_name">Системные службы</string>
+    <string name="keepalive_notification_title">Синхронизация</string>
     <string name="battery_opt_title">Повысить надёжность</string>
     <string name="battery_opt_message">Через несколько дней головное устройство может выгрузить приложение из памяти, и тогда набор PIN не откроет его. Если разрешить приложению игнорировать оптимизацию батареи, это станет гораздо менее вероятным.\n\nОткрыть системный диалог, чтобы разрешить?</string>
     <string name="battery_opt_grant">Разрешить</string>

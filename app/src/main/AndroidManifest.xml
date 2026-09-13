@@ -22,6 +22,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <!-- Call permissions imply telephony, but the app must stay installable on units without it. -->
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
     <!--
         Keep-alive foreground service + reboot restart: while apps are hidden there is no
         launcher icon, so if the OEM force-stops the process the manifest DialerCodeReceiver
@@ -38,13 +42,22 @@
         android:allowBackup="false"
         android:label="@string/app_name"
         android:icon="@drawable/ic_icon"
-        android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Stealth"
         tools:ignore="MissingApplicationIcon">
 
+        <!--
+            exported so the icon-less app can always be reached from a shell as a last
+            resort: `am start -n dezz.stealth/.MainActivity`.
+            configChanges: a day/night switch (headlights, light sensor) must not recreate
+            the activity while a hide/restore batch is running — MainActivity re-creates
+            itself once the batch is idle instead.
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTask" />
+            android:launchMode="singleTask"
+            android:configChanges="uiMode|orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|locale|layoutDirection|density|fontScale" />
 
         <!--
             Launcher trampoline. Holds the LAUNCHER intent-filter and just hands off
@@ -60,9 +73,7 @@
             android:noHistory="true"
             android:excludeFromRecents="true"
             android:taskAffinity=""
-            android:theme="@android:style/Theme.NoDisplay"
-            android:label="@string/app_name"
-            android:icon="@drawable/ic_icon">
+            android:theme="@android:style/Theme.NoDisplay">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

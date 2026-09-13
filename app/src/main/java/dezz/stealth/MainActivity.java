@@ -19,6 +19,7 @@ package dezz.stealth;
 
 import android.content.ComponentName;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -31,6 +32,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.PluralsRes;
+import androidx.annotation.StringRes;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -68,6 +71,16 @@ public class MainActivity extends AppCompatActivity {
 
     /** Incremented on every mode switch — used to discard stale list-build results. */
     private int listGeneration = 0;
+
+    /**
+     * Disabled third-party apps this app did not hide itself (see
+     * {@link AppListBuilder#findOrphanedApps}). Offered for restore, unchecked; never
+     * written to storage unless the user actually restores them.
+     */
+    private Map<String, String> orphans = new HashMap<>();
+
+    /** A configuration change arrived mid-batch; recreate once the batch is idle. */
+    private boolean recreatePending = false;
 
     /** Latest snapshot of host scans — refreshed live as the discovery progresses. */
     private List<ShellExecutor.HostScanResult> lastHostScans = null;
@@ -116,12 +129,10 @@ public class MainActivity extends AppCompatActivity {
 
         // Run orphan detection on background thread, then update UI
         backgroundExecutor.execute(() -> {
-            Map<String, String> orphans = AppListBuilder.findOrphanedApps(this, appsToHideStorage);
-            if (!orphans.isEmpty()) {
-                appsToHideStorage.save(orphans);
-            }
+            Map<String, String> found = AppListBuilder.findOrphanedApps(this, appsToHideStorage);
             postIfAlive(() -> {
-                if (appsToHideStorage.hasHiddenApps()) {
+                orphans = found;
+                if (hasRestorableApps()) {
                     // Opened while hidden (e.g. relaunched after a kill) — re-arm the
                     // keep-alive service so it survives the next idle period.
                     KeepAliveService.start(getApplicationContext());
@@ -134,6 +145,27 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         });
+    }
+
+    /** True if the restore tab has anything to offer: tracked hidden apps or orphans. */
+    private boolean hasRestorableApps() {
+        return appsToHideStorage.hasHiddenApps() || !orphans.isEmpty();
+    }
+
+    /**
+     * uiMode & co. are declared in configChanges so a day/night flip cannot destroy the
+     * activity in the middle of a hide/restore batch (the result would then be dropped).
+     * The DayNight theme still needs a recreate to actually re-theme — do it now if idle,
+     * otherwise as soon as the running batch finishes.
+     */
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        if (adbOperationInProgress) {
+            recreatePending = true;
+        } else {
+            recreate();
+        }
     }
 
     /** Post a Runnable to the main thread, but skip if the activity is finishing/destroyed. */
@@ -162,7 +194,7 @@ public class MainActivity extends AppCompatActivity {
             if (isRestoreMode) switchToHideMode();
         });
         binding.tabRestore.setOnClickListener(v -> {
-            if (!isRestoreMode && appsToHideStorage.hasHiddenApps()) switchToRestoreMode();
+            if (!isRestoreMode && hasRestorableApps()) switchToRestoreMode();
         });
     }
 
@@ -209,9 +241,12 @@ public class MainActivity extends AppCompatActivity {
                 if (p.hasSupportedTransport()) { hasMatch = true; break; }
             }
 
-            // Status emoji: ✅ found something, ❌ done & nothing, ⏳ still scanning
+            // Status emoji: ✅ found something, ❌ done & nothing, ⏳ still scanning,
+            // ⚪ cached address that isn't ours right now (never touched)
             String prefix;
-            if (hasMatch) {
+            if (!host.bound) {
+                prefix = "⚪ ";
+            } else if (hasMatch) {
                 prefix = "✅ ";
             } else if (host.scanning) {
                 prefix = "⏳ ";
@@ -225,7 +260,9 @@ public class MainActivity extends AppCompatActivity {
             }
             body.append("\n");
 
-            if (host.ports.isEmpty()) {
+            if (!host.bound) {
+                body.append("    ").append(getString(R.string.connection_host_not_bound)).append("\n");
+            } else if (host.ports.isEmpty()) {
                 body.append("    ").append(getString(host.scanning
                         ? R.string.connection_host_searching
                         : R.string.connection_host_no_open_ports)).append("\n");
@@ -328,7 +365,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateTabAppearance() {
-        boolean hasHiddenApps = appsToHideStorage.hasHiddenApps();
+        boolean hasHiddenApps = hasRestorableApps();
         int accent = ContextCompat.getColor(this, R.color.accent);
         int transparent = ContextCompat.getColor(this, android.R.color.transparent);
         int primaryText = ContextCompat.getColor(this, R.color.text_primary);
@@ -385,8 +422,10 @@ public class MainActivity extends AppCompatActivity {
 
         // hiddenApps() may also clean up stale storage entries.
         final int gen = ++listGeneration;
+        // Snapshot on the main thread: orphans is only ever touched from the main thread.
+        final Map<String, String> orphanSnapshot = new HashMap<>(orphans);
         backgroundExecutor.execute(() -> {
-            List<AppInfo> hiddenApps = AppListBuilder.hiddenApps(this, appsToHideStorage);
+            List<AppInfo> hiddenApps = AppListBuilder.hiddenApps(this, appsToHideStorage, orphanSnapshot);
             postIfAlive(() -> {
                 if (gen != listGeneration) return;
                 if (hiddenApps.isEmpty()) {
@@ -423,13 +462,13 @@ public class MainActivity extends AppCompatActivity {
 
     // ── Launcher icon visibility ──────────────────────────────────────
 
-    private void hideLauncherIcon() {
-        PackageManager p = getPackageManager();
+    private static void hideLauncherIcon(android.content.Context context) {
+        PackageManager p = context.getPackageManager();
         // Toggle the trampoline, not MainActivity. Disabling MainActivity directly makes
         // the system restart/kill the running activity even with DONT_KILL_APP — so when
         // DialerCodeReceiver re-enables it, the activity dies right after the user opens
         // it (no Java exception, just looks like the app silently exits).
-        ComponentName launcher = new ComponentName(this, LauncherTrampolineActivity.class);
+        ComponentName launcher = new ComponentName(context, LauncherTrampolineActivity.class);
         p.setComponentEnabledSetting(launcher, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
     }
 
@@ -453,6 +492,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void setAdbOperationInProgress(boolean inProgress) {
         adbOperationInProgress = inProgress;
+        if (!inProgress && recreatePending) {
+            recreatePending = false;
+            recreate();
+            return;
+        }
         float dimAlpha = inProgress ? 0.5f : 1f;
         boolean enabled = !inProgress;
 
@@ -467,7 +511,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Tabs
         binding.tabHide.setEnabled(enabled);
-        binding.tabRestore.setEnabled(enabled && appsToHideStorage.hasHiddenApps());
+        binding.tabRestore.setEnabled(enabled && hasRestorableApps());
 
         // List + progress: dim the list and intercept touches with overlay
         binding.recyclerView.setAlpha(dimAlpha);
@@ -544,31 +588,37 @@ public class MainActivity extends AppCompatActivity {
         List<String> packageNames = new ArrayList<>(packagesToDisable.keySet());
 
         ShellExecutor shell = ShellExecutor.getInstance(this);
+        final android.content.Context app = getApplicationContext();
         shell.disableApps(packageNames, new ShellExecutor.BatchCallback() {
             @Override
             public void onResult(ShellExecutor.BatchResult result) {
-                postIfAlive(() -> {
-                    // Save successfully hidden apps to storage (even if some failed)
-                    if (result.hasAnySuccess()) {
-                        Map<String, String> succeeded = new HashMap<>();
-                        for (String pkg : result.getSucceededPackages()) {
-                            succeeded.put(pkg, packagesToDisable.get(pkg));
-                        }
-                        appsToHideStorage.save(succeeded);
+                // Everything that MUST happen once apps are disabled is done right here,
+                // on the batch thread, against the application context. It does not depend
+                // on this activity still being alive: if the activity was destroyed
+                // mid-batch (config change, low memory, user backing out) the apps are
+                // already gone and we must still record them, hide the icon and arm the
+                // keep-alive — otherwise the icon stays visible and storage says "nothing
+                // hidden".
+                if (result.hasAnySuccess()) {
+                    Map<String, String> succeeded = new HashMap<>();
+                    for (String pkg : result.getSucceededPackages()) {
+                        succeeded.put(pkg, packagesToDisable.get(pkg));
                     }
+                    appsToHideStorage.save(succeeded);
+                    hideLauncherIcon(app);
+                    KeepAliveService.start(app);
+                }
 
+                postIfAlive(() -> {
                     showBatchResultToast(result, R.string.apps_hidden_successfully,
-                            R.string.apps_hide_partial, R.string.apps_hide_error);
+                            R.string.apps_hide_partial, R.plurals.apps_hidden_count,
+                            R.string.apps_hide_error);
 
                     if (result.hasAnySuccess()) {
                         // Spinner stays visible until the activity is gone — the user
-                        // is done here. Hide the launcher icon, then close the activity
-                        // ourselves so there's no awkward "app still usable for a few
-                        // seconds before vanishing" window.
-                        hideLauncherIcon();
-                        // Start the keep-alive service so the OEM is less likely to
-                        // force-stop us and kill the dialer-PIN reveal path.
-                        KeepAliveService.start(getApplicationContext());
+                        // is done here. Close the activity ourselves so there's no
+                        // awkward "app still usable for a few seconds before vanishing"
+                        // window. Icon + keep-alive were handled above.
                         finish();
                     } else {
                         // Nothing succeeded — let the user try again
@@ -617,24 +667,32 @@ public class MainActivity extends AppCompatActivity {
         setAdbOperationInProgress(true);
 
         ShellExecutor shell = ShellExecutor.getInstance(this);
+        final android.content.Context app = getApplicationContext();
         shell.enableApps(packagesToEnable, new ShellExecutor.BatchCallback() {
             @Override
             public void onResult(ShellExecutor.BatchResult result) {
+                // Storage bookkeeping must not depend on the activity surviving the batch.
+                if (result.hasAnySuccess()) {
+                    appsToHideStorage.removeAll(result.getSucceededPackages());
+                    if (!appsToHideStorage.hasHiddenApps()) {
+                        KeepAliveService.stop(app);
+                    }
+                }
+
                 postIfAlive(() -> {
                     setAdbOperationInProgress(false);
 
-                    if (result.hasAnySuccess()) {
-                        appsToHideStorage.removeAll(result.getSucceededPackages());
+                    for (String pkg : result.getSucceededPackages()) {
+                        orphans.remove(pkg);
                     }
 
                     showBatchResultToast(result, R.string.apps_restored_successfully,
-                            R.string.apps_restore_partial, R.string.apps_restore_error);
+                            R.string.apps_restore_partial, R.plurals.apps_restored_count,
+                            R.string.apps_restore_error);
 
-                    if (appsToHideStorage.hasHiddenApps()) {
+                    if (hasRestorableApps()) {
                         switchToRestoreMode();
                     } else {
-                        // Nothing hidden any more — no need to keep the process pinned.
-                        KeepAliveService.stop(getApplicationContext());
                         switchToHideMode();
                     }
                 });
@@ -653,17 +711,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showBatchResultToast(ShellExecutor.BatchResult result,
-                                      int fullSuccessRes, int partialRes, int errorRes) {
+                                      @StringRes int fullSuccessRes, @StringRes int partialRes,
+                                      @PluralsRes int succeededCountRes, @StringRes int errorRes) {
         if (result.isFullSuccess()) {
             // LENGTH_LONG so the restore "reboot recommended" hint stays on screen long
             // enough to read. Hide success message is short but a slightly longer toast
             // there is harmless (and the activity finishes right after anyway).
             Toast.makeText(this, fullSuccessRes, Toast.LENGTH_LONG).show();
         } else if (result.hasAnySuccess()) {
+            int succeeded = result.getSucceededPackages().size();
+            int failed = result.getErrors().size();
             Toast.makeText(this,
                     getString(partialRes,
-                            result.getSucceededPackages().size(),
-                            result.getErrors().size()),
+                            getResources().getQuantityString(succeededCountRes, succeeded, succeeded),
+                            getResources().getQuantityString(R.plurals.apps_failed_count, failed, failed)),
                     Toast.LENGTH_LONG).show();
         } else {
             Toast.makeText(this,

@@ -1,6 +1,7 @@
 package dezz.stealth;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -38,6 +39,12 @@ public class TelnetTransport implements ShellTransport {
 
     /**
      * Connect via Telnet, handle initial IAC negotiation and drain banner.
+     * <p>
+     * The peer must say something first. A real telnetd/shell greets us with IAC
+     * negotiation, a banner or a prompt (at the latest in response to a bare newline).
+     * If nothing at all comes back we are most likely talking to some vendor daemon
+     * (MCU bridge, diagnostics, …) that merely accepts TCP — and we refuse to push
+     * shell commands at it.
      */
     public static TelnetTransport connect(String host, int port) throws Exception {
         Socket socket = new Socket();
@@ -47,7 +54,16 @@ public class TelnetTransport implements ShellTransport {
             InputStream in = socket.getInputStream();
             OutputStream out = socket.getOutputStream();
 
-            drainBanner(socket, in, out);
+            boolean greeted = drainBanner(socket, in, out);
+            if (!greeted) {
+                // Silent peer — a shell without a banner still answers a newline with a prompt.
+                out.write('\n');
+                out.flush();
+                greeted = drainBanner(socket, in, out);
+            }
+            if (!greeted) {
+                throw new IOException("No Telnet banner or prompt");
+            }
 
             return new TelnetTransport(socket, in, out, host, port);
         } catch (Exception e) {
@@ -82,10 +98,13 @@ public class TelnetTransport implements ShellTransport {
     /**
      * Drain initial Telnet banner and IAC negotiation. Reads until {@value BANNER_DRAIN_MS}ms
      * of silence — more robust than a fixed sleep on slow servers.
+     *
+     * @return true if the peer sent at least one byte (IAC, banner or prompt).
      */
-    private static void drainBanner(Socket socket, InputStream in, OutputStream out) throws Exception {
+    private static boolean drainBanner(Socket socket, InputStream in, OutputStream out) throws Exception {
         socket.setSoTimeout(BANNER_DRAIN_MS);
         byte[] buf = new byte[4096];
+        boolean received = false;
         while (true) {
             int len;
             try {
@@ -94,9 +113,11 @@ public class TelnetTransport implements ShellTransport {
                 break;
             }
             if (len == -1) break;
+            if (len > 0) received = true;
             handleIacInBuffer(buf, len, out);
             // Banner text is discarded
         }
+        return received;
     }
 
     /**
