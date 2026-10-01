@@ -196,7 +196,7 @@ public class MainActivity extends AppCompatActivity {
         TextView target = connectionDetailsBody;
         if (target == null || lastHostScans == null) return;
 
-        boolean anySuccess = findActiveHostPort(lastHostScans) != null;
+        boolean anySuccess = ShellExecutor.getInstance(this).getActiveEndpoint() != null;
 
         StringBuilder body = new StringBuilder();
         body.append(getString(anySuccess
@@ -256,7 +256,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateConnectionStatusText() {
-        ActiveEndpoint active = findActiveHostPort(lastHostScans);
+        // Single source of truth: the transport ShellExecutor actually holds. The hide/restore
+        // buttons gate on the same owner (hasWorkingTransport / getActiveEndpoint), so the status
+        // line can no longer say "checking…" while the buttons happily run a command.
+        ConnectionStorage.Endpoint active = ShellExecutor.getInstance(this).getActiveEndpoint();
         if (active != null) {
             String label = active.transport + " " + ShellExecutor.formatHostPort(active.host, active.port);
             binding.connectionStatusText.setText(getString(R.string.connection_connected, label));
@@ -268,29 +271,6 @@ public class MainActivity extends AppCompatActivity {
             binding.connectionStatusText.setText(R.string.connection_checking);
             binding.connectionStatusText.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
         }
-    }
-
-    /** Active endpoint snapshot (host + port + transport) used in the status line. */
-    private static class ActiveEndpoint {
-        final String host;
-        final int port;
-        final String transport;
-        ActiveEndpoint(String host, int port, String transport) {
-            this.host = host; this.port = port; this.transport = transport;
-        }
-    }
-
-    private static ActiveEndpoint findActiveHostPort(List<ShellExecutor.HostScanResult> hosts) {
-        if (hosts == null) return null;
-        for (ShellExecutor.HostScanResult h : hosts) {
-            for (ShellExecutor.PortResult p : h.ports) {
-                String transport = p.successfulTransport();
-                if (p.isActive && transport != null) {
-                    return new ActiveEndpoint(h.host, p.port, transport);
-                }
-            }
-        }
-        return null;
     }
 
     /** Renders one port — checkmark + port number + protocol if found, cross otherwise. */
@@ -309,6 +289,14 @@ public class MainActivity extends AppCompatActivity {
             }
         } else {
             body.append("    ✗ :").append(p.port);
+            // Surface why each probe failed. This is what turns "a port we couldn't use" into
+            // "a port that trapped the probe" — the distinction that matters when a head unit
+            // misbehaves (e.g. a service that never stops talking).
+            for (ShellExecutor.ProbeAttempt a : p.probes) {
+                if (!a.success && a.errorMessage != null && !a.errorMessage.isEmpty()) {
+                    body.append("  [").append(a.transport).append(": ").append(a.errorMessage).append("]");
+                }
+            }
         }
         body.append("\n");
     }

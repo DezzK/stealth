@@ -1,6 +1,7 @@
 package dezz.stealth;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -21,6 +22,26 @@ public class TelnetTransport implements ShellTransport {
     private static final int BANNER_DRAIN_MS = 500;
     private static final int TRAILING_DRAIN_MS = 200;
     private static final String END_MARKER = "__DONE__";
+
+    /**
+     * Hard ceiling on the banner phase. A real Telnet server emits a short banner and then
+     * goes quiet, so {@link #BANNER_DRAIN_MS} of silence ends the drain. A port that streams
+     * bytes continuously (some non-Telnet services do) never produces that gap, so the
+     * idle-gap break never fires — without this ceiling {@code drainBanner} reads forever,
+     * wedges the discovery thread, and holds the remote port open the entire time. That exact
+     * trap is what probing a chatty, adb-coupled service port looks like in the field.
+     */
+    private static final int BANNER_DEADLINE_MS = 3000;
+
+    /**
+     * Hard ceiling on a single {@link #exec} call. Bounds total read time even when the peer
+     * dribbles a byte more often than {@link #READ_TIMEOUT_MS}, which would otherwise keep the
+     * idle-gap timeout from ever firing.
+     */
+    private static final int EXEC_DEADLINE_MS = 10000;
+
+    /** Ceiling on one response so a peer that never emits the marker can't grow the buffer without bound. */
+    private static final int MAX_RESPONSE_BYTES = 1 << 16; // 64 KiB
 
     private final Socket socket;
     private final InputStream in;
@@ -85,8 +106,14 @@ public class TelnetTransport implements ShellTransport {
      */
     private static void drainBanner(Socket socket, InputStream in, OutputStream out) throws Exception {
         socket.setSoTimeout(BANNER_DRAIN_MS);
+        long deadline = System.currentTimeMillis() + BANNER_DEADLINE_MS;
         byte[] buf = new byte[4096];
         while (true) {
+            if (System.currentTimeMillis() >= deadline) {
+                // Continuous chatter with no idle gap — not a usable Telnet shell. Fail fast
+                // instead of reading forever and holding the port open.
+                throw new IOException("Telnet banner did not settle within " + BANNER_DEADLINE_MS + "ms");
+            }
             int len;
             try {
                 len = in.read(buf);
@@ -129,8 +156,14 @@ public class TelnetTransport implements ShellTransport {
         byte[] buf = new byte[4096];
         byte[] markerBytes = END_MARKER.getBytes(StandardCharsets.US_ASCII);
         boolean markerSeen = false;
+        long deadline = System.currentTimeMillis() + EXEC_DEADLINE_MS;
 
         while (true) {
+            if (System.currentTimeMillis() >= deadline || collected.size() > MAX_RESPONSE_BYTES) {
+                // Overran the command deadline or the response ceiling — stop reading and parse
+                // whatever arrived. A peer that never emits the marker can't trap us here.
+                break;
+            }
             int len;
             try {
                 len = in.read(buf);

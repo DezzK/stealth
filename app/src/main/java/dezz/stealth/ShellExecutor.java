@@ -72,6 +72,15 @@ public class ShellExecutor {
     /** How many hosts get scanned in parallel during the full discovery phase. */
     private static final int PARALLEL_HOST_SCANS = 4;
 
+    /**
+     * Safety net when joining probe / cache-verify worker threads. The transports are already
+     * self-bounding (connect + handshake/banner + command deadlines), so this only fires if a
+     * worker ignores its own timeout. It stops one wedged thread from freezing the whole
+     * discovery cycle — and, since discovery runs on a single-thread executor, every cycle that
+     * would otherwise queue behind it forever. Must exceed the slowest transport deadline.
+     */
+    private static final int JOIN_SAFETY_TIMEOUT_MS = 20000;
+
     /** Range scanned by the active fallback. */
     private static final int FIRST_PORT = 1;
     private static final int LAST_PORT = 65535;
@@ -125,6 +134,10 @@ public class ShellExecutor {
 
     /** Factory for recreating the chosen transport on each batch. Null until discovered. */
     private volatile TransportFactory activeFactory = null;
+
+    /** The endpoint behind {@link #activeFactory}, set in lock-step with it so the UI can name
+     *  the live connection from the same owner the hide/restore buttons gate on. */
+    private volatile ConnectionStorage.Endpoint activeEndpoint = null;
 
     // ── Public types ──────────────────────────────────────────────────
 
@@ -258,6 +271,19 @@ public class ShellExecutor {
         };
     }
 
+    /**
+     * Join a batch of futures, giving each at most {@link #JOIN_SAFETY_TIMEOUT_MS} so a wedged
+     * worker can't freeze the discovery cycle. A timed-out worker is abandoned; the caller's
+     * {@code shutdownNow()} interrupts the (daemon) laggard and its transport deadline ends it.
+     */
+    private static void joinAll(List<java.util.concurrent.Future<?>> futures) {
+        for (java.util.concurrent.Future<?> f : futures) {
+            try {
+                f.get(JOIN_SAFETY_TIMEOUT_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+            } catch (Exception ignored) {}
+        }
+    }
+
     public static ShellExecutor getInstance(Context context) {
         if (instance == null) {
             synchronized (ShellExecutor.class) {
@@ -274,6 +300,11 @@ public class ShellExecutor {
         return activeFactory != null;
     }
 
+    /** The endpoint behind the working transport, or null if none has been found. */
+    public ConnectionStorage.Endpoint getActiveEndpoint() {
+        return activeEndpoint;
+    }
+
     // ── Connection check ──────────────────────────────────────────────
 
     public void checkConnection(StatusCallback callback) {
@@ -282,6 +313,7 @@ public class ShellExecutor {
             // a head-unit reboot (which changes the dynamic ADB port) would leave us
             // pointing at a now-dead endpoint until the app process restarts.
             activeFactory = null;
+            activeEndpoint = null;
 
             // Hosts to probe — loopback first, then every IPv4 bound to an up interface
             List<String> hosts = candidateHosts();
@@ -333,9 +365,7 @@ public class ShellExecutor {
                     }
                 }));
             }
-            for (java.util.concurrent.Future<?> f : futures) {
-                try { f.get(); } catch (Exception ignored) {}
-            }
+            joinAll(futures);
         } finally {
             pool.shutdownNow();
         }
@@ -381,9 +411,7 @@ public class ShellExecutor {
                     }
                 }));
             }
-            for (java.util.concurrent.Future<?> f : futures) {
-                try { f.get(); } catch (Exception ignored) {}
-            }
+            joinAll(futures);
         } finally {
             pool.shutdownNow();
         }
@@ -424,9 +452,7 @@ public class ShellExecutor {
                     }
                 }));
             }
-            for (java.util.concurrent.Future<?> f : futures) {
-                try { f.get(); } catch (Exception ignored) {}
-            }
+            joinAll(futures);
         } finally {
             pool.shutdownNow();
         }
@@ -449,7 +475,11 @@ public class ShellExecutor {
         List<ProbeAttempt> attempts = new ArrayList<>(2);
         ProbeAttempt adb = tryProtocol(host, port, ConnectionStorage.TRANSPORT_ADB);
         attempts.add(adb);
-        if (!adb.success) {
+        // Only fall back to the Telnet probe while we still lack a working transport. The Telnet
+        // probe writes a shell command to the port and waits for a reply; aiming that at an
+        // unknown service — one possibly coupled to adbd — is the most intrusive thing discovery
+        // does. Once ADB is up elsewhere we don't need it, so we stop poking the other ports.
+        if (!adb.success && activeFactory == null) {
             attempts.add(tryProtocol(host, port, ConnectionStorage.TRANSPORT_TELNET));
         }
         recordPortResult(host, port, attempts, states);
@@ -907,6 +937,7 @@ public class ShellExecutor {
             synchronized (this) {
                 if (activeFactory == null) {
                     activeFactory = factory;
+                    activeEndpoint = new ConnectionStorage.Endpoint(host, port, transport);
                     becameActive = true;
                 }
             }
