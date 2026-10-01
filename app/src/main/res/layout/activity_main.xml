@@ -21,7 +21,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background"
     android:orientation="vertical">
 
     <!-- Header: title + about icon + settings icon -->
@@ -31,8 +30,8 @@
         android:background="@color/header_background"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="24sp"
-        android:paddingVertical="12sp">
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="12dp">
 
         <TextView
             android:id="@+id/headerText"
@@ -78,8 +77,8 @@
         android:ellipsize="end"
         android:gravity="start|center_vertical"
         android:minHeight="36dp"
-        android:paddingHorizontal="24sp"
-        android:paddingVertical="8sp"
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="8dp"
         android:singleLine="true"
         android:text="@string/connection_checking"
         android:textColor="@color/text_secondary"
@@ -90,6 +89,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/header_background"
+        android:baselineAligned="false"
         android:orientation="horizontal">
 
         <FrameLayout
@@ -102,7 +102,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:paddingVertical="12sp"
+                android:paddingVertical="12dp"
                 android:text="@string/tab_hide"
                 android:textColor="@color/text_primary"
                 android:textSize="20sp"
@@ -126,7 +126,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:paddingVertical="12sp"
+                android:paddingVertical="12dp"
                 android:text="@string/tab_restore"
                 android:textColor="@color/text_secondary"
                 android:textSize="20sp" />
@@ -146,17 +146,17 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="16sp"
-        android:paddingVertical="12sp">
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp">
 
         <Button
             android:id="@+id/hideAppsButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8sp"
+            android:layout_marginEnd="8dp"
             android:layout_weight="1"
             android:background="@color/action_hide"
-            android:paddingVertical="10sp"
+            android:paddingVertical="10dp"
             android:singleLine="true"
             android:text="@string/hide_apps"
             android:textColor="@android:color/white"
@@ -166,10 +166,10 @@
             android:id="@+id/restoreAppsButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8sp"
+            android:layout_marginStart="8dp"
             android:layout_weight="1"
             android:background="@color/action_restore"
-            android:paddingVertical="10sp"
+            android:paddingVertical="10dp"
             android:singleLine="true"
             android:text="@string/restore_apps"
             android:textColor="@android:color/white"
@@ -181,8 +181,8 @@
         android:id="@+id/modeHeaderText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingHorizontal="16sp"
-        android:paddingBottom="4sp"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="4dp"
         android:text="@string/hide_mode_header"
         android:textColor="@color/text_secondary"
         android:textSize="14sp" />
@@ -195,14 +195,14 @@
         android:background="?attr/selectableItemBackground"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="16sp"
-        android:paddingVertical="6sp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="6dp"
         android:visibility="gone">
 
         <ImageView
             android:layout_width="20dp"
             android:layout_height="20dp"
-            android:layout_marginEnd="8sp"
+            android:layout_marginEnd="8dp"
             android:contentDescription="@null"
             android:src="@android:drawable/ic_dialog_info"
             android:tint="@color/accent"

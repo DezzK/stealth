@@ -44,17 +44,26 @@ final class AppListBuilder {
                     !appsToKeep.contains(appInfo.packageName)));
         }
 
-        result.sort(Comparator.comparing(a -> a.getAppName().toLowerCase()));
+        result.sort(Comparator.comparing(AppInfo::getAppName, String.CASE_INSENSITIVE_ORDER));
         return result;
     }
 
     /**
-     * Apps currently hidden via storage. As a side effect, cleans up storage
-     * entries for apps that have been re-enabled or uninstalled.
+     * Apps currently hidden via storage (pre-checked) plus {@code orphans} — disabled apps
+     * this app never recorded (unchecked, the user opts in explicitly). As a side effect,
+     * cleans up storage entries for apps that have been re-enabled or uninstalled.
      */
-    static List<AppInfo> hiddenApps(Context context, AppsToHideStorage storage) {
+    static List<AppInfo> hiddenApps(Context context, AppsToHideStorage storage,
+                                    Map<String, String> orphans) {
         PackageManager pm = context.getPackageManager();
-        Map<String, String> tracked = storage.load();
+        Map<String, String> tracked = new HashMap<>(storage.load());
+        Set<String> untracked = new java.util.HashSet<>();
+        for (Map.Entry<String, String> o : orphans.entrySet()) {
+            if (!tracked.containsKey(o.getKey())) {
+                tracked.put(o.getKey(), o.getValue());
+                untracked.add(o.getKey());
+            }
+        }
         List<AppInfo> result = new ArrayList<>();
         List<String> toRemoveFromStorage = new ArrayList<>();
 
@@ -66,7 +75,7 @@ final class AppListBuilder {
             String packageName = entry.getKey();
 
             if (isAppEnabled(pm, packageName)) {
-                toRemoveFromStorage.add(packageName);
+                if (!untracked.contains(packageName)) toRemoveFromStorage.add(packageName);
                 continue;
             }
 
@@ -81,20 +90,28 @@ final class AppListBuilder {
                 // Use stored name and default icon as fallback
             }
 
-            result.add(new AppInfo(packageName, appName, icon, true));
+            // Orphans start unchecked: they may have been disabled on purpose by the
+            // user or the vendor, so restoring them must be an explicit choice.
+            result.add(new AppInfo(packageName, appName, icon, !untracked.contains(packageName)));
         }
 
         if (!toRemoveFromStorage.isEmpty()) {
             storage.removeAll(toRemoveFromStorage);
         }
 
-        result.sort(Comparator.comparing(a -> a.getAppName().toLowerCase()));
+        result.sort(Comparator.comparing(AppInfo::getAppName, String.CASE_INSENSITIVE_ORDER));
         return result;
     }
 
     /**
-     * Detects disabled third-party apps not tracked in storage (orphans).
-     * Used at startup to recover from external state changes.
+     * Detects third-party apps in the {@code DISABLED_USER} state that are not tracked in
+     * storage (orphans). That is the exact state {@code pm disable-user} — our hide
+     * command — leaves behind, so this recovers from lost storage (reinstall, cleared
+     * data) after apps were hidden. Apps disabled via plain {@code pm disable} or
+     * {@code DISABLED_UNTIL_USED} (vendor / store decisions) are deliberately ignored.
+     * <p>
+     * Orphans are never written to storage automatically: they are offered in the
+     * restore list unchecked, and only become tracked if the user restores them.
      */
     static Map<String, String> findOrphanedApps(Context context, AppsToHideStorage storage) {
         PackageManager pm = context.getPackageManager();
@@ -107,11 +124,20 @@ final class AppListBuilder {
         for (ApplicationInfo appInfo : packages) {
             if (AlwaysIgnoreAppResolver.alwaysIgnoreApp(appInfo, currentPackageName)) continue;
             if (known.containsKey(appInfo.packageName)) continue;
-            if (!isAppEnabled(pm, appInfo.packageName)) {
+            if (isDisabledByUser(pm, appInfo.packageName)) {
                 orphans.put(appInfo.packageName, appInfo.loadLabel(pm).toString());
             }
         }
         return orphans;
+    }
+
+    private static boolean isDisabledByUser(PackageManager pm, String packageName) {
+        try {
+            return pm.getApplicationEnabledSetting(packageName)
+                    == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     private static boolean isAppEnabled(PackageManager pm, String packageName) {

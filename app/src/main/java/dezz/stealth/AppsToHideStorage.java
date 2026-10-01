@@ -25,7 +25,7 @@ public class AppsToHideStorage {
             editor.putString(entry.getKey(), entry.getValue());
         }
 
-        editor.commit();
+        editor.apply();
     }
 
     public Map<String, String> load() {
@@ -48,7 +48,7 @@ public class AppsToHideStorage {
         for (String packageName : packageNames) {
             editor.remove(packageName);
         }
-        editor.commit();
+        editor.apply();
     }
 
     public boolean hasHiddenApps() {

@@ -80,10 +80,17 @@ public class KeepAliveService extends Service {
 
     private Notification buildNotification() {
         createChannel();
+        // Neutral glyph + title: a foreground service must keep an entry in the shade, so
+        // instead of showing this app's own icon/name we present a generic "system sync"
+        // face. The app-name line in the entry is the launcher label, which the public
+        // notification API cannot override — see class docs.
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_icon)
-                .setContentTitle(getString(R.string.keepalive_channel_name))
+                .setSmallIcon(R.drawable.ic_sync)
+                .setContentTitle(getString(R.string.keepalive_notification_title))
                 .setPriority(NotificationCompat.PRIORITY_MIN)
+                // Keep it off the lock screen; the shade entry itself cannot be avoided for
+                // a foreground service — the user is told about it before hiding.
+                .setVisibility(NotificationCompat.VISIBILITY_SECRET)
                 .setOngoing(true)
                 .setShowWhen(false)
                 .build();
@@ -96,6 +103,7 @@ public class KeepAliveService extends Service {
                 getString(R.string.keepalive_channel_name),
                 NotificationManager.IMPORTANCE_MIN);
         channel.setShowBadge(false);
+        channel.setLockscreenVisibility(Notification.VISIBILITY_SECRET);
         NotificationManager nm = getSystemService(NotificationManager.class);
         if (nm != null) {
             nm.createNotificationChannel(channel);
