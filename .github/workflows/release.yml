@@ -19,23 +19,24 @@ jobs:
   build-and-release:
     name: Build and Release
     runs-on: ubuntu-latest
+    env:
+      # The tag being released: the one a manual run asks for, otherwise the pushed tag.
+      # Checkout builds it too, so a manual run builds that tag rather than the branch it
+      # was dispatched from.
+      RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
+        ref: ${{ env.RELEASE_TAG }}
         submodules: recursive
 
     - name: Determine version
       id: version
       run: |
-        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-          VERSION=${{ github.event.inputs.tag }}
-        else
-          VERSION=${{ github.ref_name }}
-        fi
-        echo "version=${VERSION}" >> $GITHUB_OUTPUT
-        echo "version=${VERSION}"
+        echo "version=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+        echo "version=${RELEASE_TAG}"
 
     - name: Set up JDK 21
       uses: actions/setup-java@v4
@@ -45,7 +46,7 @@ jobs:
         cache: 'gradle'
 
     - name: Set up Android SDK
-      uses: android-actions/setup-android@v2
+      uses: android-actions/setup-android@v4
 
     - name: Decode Keystore
       run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
@@ -61,7 +62,7 @@ jobs:
         ./gradlew assembleRelease
 
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ steps.version.outputs.version }}
         name: Release ${{ steps.version.outputs.version }}
