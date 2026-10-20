@@ -9,7 +9,6 @@ import androidx.core.content.res.ResourcesCompat;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,10 +48,30 @@ final class AppListBuilder {
     }
 
     /**
-     * Apps currently hidden via storage. As a side effect, cleans up storage
-     * entries for apps that have been re-enabled or uninstalled.
+     * Apps offered on the Restore tab.
+     * <ul>
+     *   <li>If we have a record of what we hid, exactly those apps, pre-checked.</li>
+     *   <li>If we have no record (app reinstalled or its data cleared while apps were hidden,
+     *       or the process died mid-hide before saving), every disabled app we could have
+     *       hidden — all <b>unchecked</b>, so the user picks what to bring back.</li>
+     * </ul>
+     * Without a record we can't tell our apps from ones the firmware or dealer disabled on
+     * purpose, so nothing untracked is ever pre-checked or saved: one tap on Restore once
+     * re-enabled a dealer-disabled package that then nagged the driver every few seconds.
+     * <p>
+     * As a side effect, drops storage entries for apps that were re-enabled or uninstalled.
      */
-    static List<AppInfo> hiddenApps(Context context, AppsToHideStorage storage) {
+    static List<AppInfo> restorableApps(Context context, AppsToHideStorage storage) {
+        List<AppInfo> result = trackedHiddenApps(context, storage);
+        if (result.isEmpty()) {
+            result = untrackedDisabledApps(context);
+        }
+        result.sort(Comparator.comparing(a -> a.getAppName().toLowerCase()));
+        return result;
+    }
+
+    /** Apps recorded in storage as hidden by us and still disabled, pre-checked. */
+    private static List<AppInfo> trackedHiddenApps(Context context, AppsToHideStorage storage) {
         PackageManager pm = context.getPackageManager();
         Map<String, String> tracked = storage.load();
         List<AppInfo> result = new ArrayList<>();
@@ -87,31 +106,30 @@ final class AppListBuilder {
         if (!toRemoveFromStorage.isEmpty()) {
             storage.removeAll(toRemoveFromStorage);
         }
-
-        result.sort(Comparator.comparing(a -> a.getAppName().toLowerCase()));
         return result;
     }
 
     /**
-     * Detects disabled third-party apps not tracked in storage (orphans).
-     * Used at startup to recover from external state changes.
+     * Every disabled app the Hide tab could have offered (same {@link AlwaysIgnoreAppResolver}
+     * filter), unchecked — we don't know who disabled them.
      */
-    static Map<String, String> findOrphanedApps(Context context, AppsToHideStorage storage) {
+    private static List<AppInfo> untrackedDisabledApps(Context context) {
         PackageManager pm = context.getPackageManager();
         List<ApplicationInfo> packages = pm.getInstalledApplications(
                 PackageManager.GET_META_DATA | PackageManager.MATCH_DISABLED_COMPONENTS);
         String currentPackageName = context.getPackageName();
-        Map<String, String> known = storage.load();
 
-        Map<String, String> orphans = new HashMap<>();
+        List<AppInfo> result = new ArrayList<>();
         for (ApplicationInfo appInfo : packages) {
             if (AlwaysIgnoreAppResolver.alwaysIgnoreApp(appInfo, currentPackageName)) continue;
-            if (known.containsKey(appInfo.packageName)) continue;
-            if (!isAppEnabled(pm, appInfo.packageName)) {
-                orphans.put(appInfo.packageName, appInfo.loadLabel(pm).toString());
-            }
+            if (isAppEnabled(pm, appInfo.packageName)) continue;
+            result.add(new AppInfo(
+                    appInfo.packageName,
+                    appInfo.loadLabel(pm).toString(),
+                    appInfo.loadIcon(pm),
+                    false));
         }
-        return orphans;
+        return result;
     }
 
     private static boolean isAppEnabled(PackageManager pm, String packageName) {

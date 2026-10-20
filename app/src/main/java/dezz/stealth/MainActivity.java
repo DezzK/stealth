@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
 import dezz.stealth.databinding.ActivityMainBinding;
 
@@ -68,6 +69,9 @@ public class MainActivity extends AppCompatActivity {
 
     /** Incremented on every mode switch — used to discard stale list-build results. */
     private int listGeneration = 0;
+
+    /** Whether the Restore tab has anything to offer — see {@link AppListBuilder#restorableApps}. */
+    private boolean restoreAvailable = false;
 
     /** Latest snapshot of host scans — refreshed live as the discovery progresses. */
     private List<ShellExecutor.HostScanResult> lastHostScans = null;
@@ -114,24 +118,34 @@ public class MainActivity extends AppCompatActivity {
         updatePinState();
         checkAdbStatus();
 
-        // Run orphan detection on background thread, then update UI
-        backgroundExecutor.execute(() -> {
-            Map<String, String> orphans = AppListBuilder.findOrphanedApps(this, appsToHideStorage);
-            if (!orphans.isEmpty()) {
-                appsToHideStorage.save(orphans);
+        // Mode and keep-alive follow only what WE hid (storage); disabled apps we have no
+        // record of merely make the Restore tab available.
+        loadRestorableApps(apps -> {
+            if (appsToHideStorage.hasHiddenApps()) {
+                // Opened while hidden (e.g. relaunched after a kill) — re-arm the
+                // keep-alive service so it survives the next idle period.
+                KeepAliveService.start(getApplicationContext());
+                switchToRestoreMode();
+            } else {
+                // Nothing hidden (possibly restored externally, e.g. via adb) — make
+                // sure the keep-alive service isn't left running for nothing.
+                KeepAliveService.stop(getApplicationContext());
+                switchToHideMode();
             }
+        });
+    }
+
+    /**
+     * Builds the Restore list off the UI thread (many PackageManager IPC calls; it may also
+     * prune stale storage entries), refreshes {@link #restoreAvailable}, then hands the list
+     * to {@code then} on the UI thread.
+     */
+    private void loadRestorableApps(Consumer<List<AppInfo>> then) {
+        backgroundExecutor.execute(() -> {
+            List<AppInfo> apps = AppListBuilder.restorableApps(this, appsToHideStorage);
             postIfAlive(() -> {
-                if (appsToHideStorage.hasHiddenApps()) {
-                    // Opened while hidden (e.g. relaunched after a kill) — re-arm the
-                    // keep-alive service so it survives the next idle period.
-                    KeepAliveService.start(getApplicationContext());
-                    switchToRestoreMode();
-                } else {
-                    // Nothing hidden (possibly restored externally, e.g. via adb) — make
-                    // sure the keep-alive service isn't left running for nothing.
-                    KeepAliveService.stop(getApplicationContext());
-                    switchToHideMode();
-                }
+                restoreAvailable = !apps.isEmpty();
+                then.accept(apps);
             });
         });
     }
@@ -162,7 +176,7 @@ public class MainActivity extends AppCompatActivity {
             if (isRestoreMode) switchToHideMode();
         });
         binding.tabRestore.setOnClickListener(v -> {
-            if (!isRestoreMode && appsToHideStorage.hasHiddenApps()) switchToRestoreMode();
+            if (!isRestoreMode && restoreAvailable) switchToRestoreMode();
         });
     }
 
@@ -316,7 +330,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateTabAppearance() {
-        boolean hasHiddenApps = appsToHideStorage.hasHiddenApps();
         int accent = ContextCompat.getColor(this, R.color.accent);
         int transparent = ContextCompat.getColor(this, android.R.color.transparent);
         int primaryText = ContextCompat.getColor(this, R.color.text_primary);
@@ -336,12 +349,12 @@ public class MainActivity extends AppCompatActivity {
             binding.tabHide.setTypeface(null, Typeface.BOLD);
             binding.tabHideIndicator.setBackgroundColor(accent);
 
-            binding.tabRestore.setTextColor(hasHiddenApps ? secondaryText : disabledText);
+            binding.tabRestore.setTextColor(restoreAvailable ? secondaryText : disabledText);
             binding.tabRestore.setTypeface(null, Typeface.NORMAL);
             binding.tabRestoreIndicator.setBackgroundColor(transparent);
         }
 
-        binding.tabRestore.setEnabled(hasHiddenApps);
+        binding.tabRestore.setEnabled(restoreAvailable);
     }
 
     private void setupHideMode() {
@@ -371,21 +384,17 @@ public class MainActivity extends AppCompatActivity {
         binding.restoreAppsButton.setVisibility(View.VISIBLE);
         updatePinState();
 
-        // hiddenApps() may also clean up stale storage entries.
         final int gen = ++listGeneration;
-        backgroundExecutor.execute(() -> {
-            List<AppInfo> hiddenApps = AppListBuilder.hiddenApps(this, appsToHideStorage);
-            postIfAlive(() -> {
-                if (gen != listGeneration) return;
-                if (hiddenApps.isEmpty()) {
-                    // Nothing actually disabled — fall back to hide mode
-                    switchToHideMode();
-                    return;
-                }
-                adapter = new AppsAdapter(hiddenApps, null);
-                binding.recyclerView.setAdapter(adapter);
-                updateEmptyState(false, 0);
-            });
+        loadRestorableApps(apps -> {
+            if (gen != listGeneration) return;
+            if (apps.isEmpty()) {
+                // Nothing actually disabled — fall back to hide mode
+                switchToHideMode();
+                return;
+            }
+            adapter = new AppsAdapter(apps, null);
+            binding.recyclerView.setAdapter(adapter);
+            updateEmptyState(false, 0);
         });
     }
 
@@ -455,7 +464,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Tabs
         binding.tabHide.setEnabled(enabled);
-        binding.tabRestore.setEnabled(enabled && appsToHideStorage.hasHiddenApps());
+        binding.tabRestore.setEnabled(enabled && restoreAvailable);
 
         // List + progress: dim the list and intercept touches with overlay
         binding.recyclerView.setAlpha(dimAlpha);
@@ -624,6 +633,8 @@ public class MainActivity extends AppCompatActivity {
                         // Nothing hidden any more — no need to keep the process pinned.
                         KeepAliveService.stop(getApplicationContext());
                         switchToHideMode();
+                        // Untracked disabled apps may remain; keep the Restore tab honest.
+                        loadRestorableApps(apps -> updateTabAppearance());
                     }
                 });
             }
