@@ -15,20 +15,25 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// The version has two spellings, both made here, once. The package's versionName is the bare version
+// (1.2.3); the git tag, and after it the APK file names, put a «v» before it (v1.2.3). VERSION_NAME may
+// be given either way — CI hands over the tag.
+ext.versionTagPrefix = 'v'
+
 String getVersionName() {
     def envVersion = System.getenv('VERSION_NAME')
     if (envVersion) {
-        return envVersion
+        return envVersion.startsWith(versionTagPrefix) ? envVersion.substring(versionTagPrefix.length()) : envVersion
     }
 
     logger.warn('Environment variable `VERSION_NAME` was not set, using default version')
 
-    return 'v1.0.0'
+    return '1.0.0'
 }
 
 int getVersionCode() {
     def version = getVersionName()
-    def (major, minor, patch) = version.replaceFirst('^v', '').replaceFirst('-\\w+$', '').tokenize('.').collect { it.toInteger() }
+    def (major, minor, patch) = version.replaceFirst('-\\w+$', '').tokenize('.').collect { it.toInteger() }
 
     return major * 10000 + minor * 100 + (patch ?: 0)
 }
@@ -36,6 +41,8 @@ int getVersionCode() {
 ext {
     appVersionName = getVersionName()
     appVersionCode = getVersionCode()
+    // The version as the git tag spells it, and so the APK file names.
+    appVersionTag = versionTagPrefix + appVersionName
 
     println "Building version: ${appVersionName} (${appVersionCode})"
 }

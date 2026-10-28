@@ -32,7 +32,7 @@ android {
 
     applicationVariants.configureEach { variant ->
         variant.outputs.configureEach {
-            outputFileName = "stealth-${variant.versionName}.apk"
+            outputFileName = "stealth-${rootProject.ext.appVersionTag}.apk"
         }
     }
 
