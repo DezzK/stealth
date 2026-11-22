@@ -17,9 +17,7 @@
 
 package dezz.stealth;
 
-import android.content.ComponentName;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
@@ -94,7 +92,12 @@ public class MainActivity extends AppCompatActivity {
         binding = ActivityMainBinding.inflate(this.getLayoutInflater());
         setContentView(binding.getRoot());
 
-        ensureMainActivityEnabled();
+        // Opening the app is a reveal — dialer PIN, or `am start -n dezz.stealth/.MainActivity`
+        // over adb when the PIN path is dead. Not a tap on the Recents card the hide flow
+        // leaves behind: anyone can do that, so it must not bring the icon back for good.
+        if ((getIntent().getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0) {
+            LauncherIcon.show(this);
+        }
         initializeViews();
         permissionGate.requestMissing();
     }
@@ -418,34 +421,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // ── Launcher icon visibility ──────────────────────────────────────
-
-    private void hideLauncherIcon() {
-        PackageManager p = getPackageManager();
-        // Toggle the trampoline, not MainActivity. Disabling MainActivity directly makes
-        // the system restart/kill the running activity even with DONT_KILL_APP — so when
-        // DialerCodeReceiver re-enables it, the activity dies right after the user opens
-        // it (no Java exception, just looks like the app silently exits).
-        ComponentName launcher = new ComponentName(this, LauncherTrampolineActivity.class);
-        p.setComponentEnabledSetting(launcher, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
-    }
-
-    /**
-     * Migration safety net: re-enable MainActivity in case an older build had disabled
-     * it directly. New code never disables MainActivity (only the alias), so on legacy
-     * installs we may inherit a DISABLED state that prevents the activity from launching.
-     */
-    private void ensureMainActivityEnabled() {
-        try {
-            PackageManager p = getPackageManager();
-            ComponentName cn = new ComponentName(this, MainActivity.class);
-            int state = p.getComponentEnabledSetting(cn);
-            if (state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
-                p.setComponentEnabledSetting(cn, PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, PackageManager.DONT_KILL_APP);
-            }
-        } catch (Exception ignored) {}
-    }
-
     // ── ADB operation lifecycle ───────────────────────────────────────
 
     private void setAdbOperationInProgress(boolean inProgress) {
@@ -453,13 +428,13 @@ public class MainActivity extends AppCompatActivity {
         float dimAlpha = inProgress ? 0.5f : 1f;
         boolean enabled = !inProgress;
 
-        // Action buttons
-        binding.hideAppsButton.setEnabled(enabled);
-        binding.hideAppsButton.setAlpha(dimAlpha);
-        binding.restoreAppsButton.setEnabled(enabled);
-        binding.restoreAppsButton.setAlpha(dimAlpha);
-        binding.settingsButton.setEnabled(enabled);
-        binding.settingsButton.setAlpha(dimAlpha);
+        // Action buttons. About too: otherwise it can open on top mid-hide and stay on
+        // screen after we finish.
+        for (View button : new View[]{binding.hideAppsButton, binding.restoreAppsButton,
+                binding.settingsButton, binding.aboutButton}) {
+            button.setEnabled(enabled);
+            button.setAlpha(dimAlpha);
+        }
         binding.pinHintRow.setEnabled(enabled);
 
         // Tabs
@@ -562,7 +537,7 @@ public class MainActivity extends AppCompatActivity {
                         // is done here. Hide the launcher icon, then close the activity
                         // ourselves so there's no awkward "app still usable for a few
                         // seconds before vanishing" window.
-                        hideLauncherIcon();
+                        LauncherIcon.hide(MainActivity.this);
                         // Start the keep-alive service so the OEM is less likely to
                         // force-stop us and kill the dialer-PIN reveal path.
                         KeepAliveService.start(getApplicationContext());

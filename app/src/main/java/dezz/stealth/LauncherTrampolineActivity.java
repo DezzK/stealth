@@ -37,16 +37,15 @@ public class LauncherTrampolineActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Migration safety net: legacy builds disabled MainActivity directly to hide
-        // the icon. After upgrading, the trampoline is the launcher entry but the
-        // legacy DISABLED state on MainActivity may still be in place — start would
-        // fail silently. Reset MainActivity to default (enabled) before launching.
+        // Migration safety net, and its only home: legacy builds (v0.3–v0.8) disabled
+        // MainActivity directly to hide the icon. After upgrading, the trampoline is the
+        // launcher entry but the legacy DISABLED state on MainActivity may still be in
+        // place — start would fail. Reset MainActivity to default (enabled) before
+        // launching. DialerCodeReceiver opens this activity when MainActivity won't start.
         try {
             PackageManager p = getPackageManager();
             ComponentName main = new ComponentName(this, MainActivity.class);
-            int state = p.getComponentEnabledSetting(main);
-            if (state != PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
-                    && state != PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+            if (!EnabledSetting.isEnabled(p.getComponentEnabledSetting(main))) {
                 p.setComponentEnabledSetting(main,
                         PackageManager.COMPONENT_ENABLED_STATE_DEFAULT,
                         PackageManager.DONT_KILL_APP);

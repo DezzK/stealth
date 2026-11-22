@@ -134,9 +134,7 @@ final class AppListBuilder {
 
     private static boolean isAppEnabled(PackageManager pm, String packageName) {
         try {
-            int setting = pm.getApplicationEnabledSetting(packageName);
-            return setting == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                    || setting == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT;
+            return EnabledSetting.isEnabled(pm.getApplicationEnabledSetting(packageName));
         } catch (IllegalArgumentException e) {
             // Package not found (uninstalled) — treat as not restorable, remove from storage
             return true;

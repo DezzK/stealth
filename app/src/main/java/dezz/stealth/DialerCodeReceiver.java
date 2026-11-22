@@ -1,10 +1,9 @@
 package dezz.stealth;
 
+import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.util.Log;
 
 public class DialerCodeReceiver extends BroadcastReceiver {
@@ -33,24 +32,23 @@ public class DialerCodeReceiver extends BroadcastReceiver {
             Log.d(TAG, "PIN matched — showing launcher icon");
             // Cancel the outgoing call
             setResultData(null);
-            // Show the launcher icon and open the activity
-            showLauncherIcon(context);
+            // MainActivity shows the icon itself when it opens; showing it here too means
+            // the icon still comes back if the ROM blocks this background activity start.
+            LauncherIcon.show(context);
             launchMainActivity(context);
         }
-    }
-
-    private void showLauncherIcon(Context context) {
-        PackageManager p = context.getPackageManager();
-        // Toggle the trampoline, not MainActivity. Toggling MainActivity directly makes
-        // the system restart/kill the freshly-launched activity right after the user
-        // opens it from the dialer code — see MainActivity.hideLauncherIcon.
-        ComponentName componentName = new ComponentName(context, LauncherTrampolineActivity.class);
-        p.setComponentEnabledSetting(componentName, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
     }
 
     private void launchMainActivity(Context context) {
         Intent launchIntent = new Intent(context, MainActivity.class);
         launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        context.startActivity(launchIntent);
+        try {
+            context.startActivity(launchIntent);
+        } catch (ActivityNotFoundException e) {
+            // MainActivity is still disabled by a v0.3–v0.8 hide that survived the upgrade.
+            // The trampoline's migration re-enables it and opens it.
+            context.startActivity(new Intent(context, LauncherTrampolineActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        }
     }
 }
